@@ -1,6 +1,6 @@
 {
-  "name": "MedAssist-IA",
-  "description": "A high-performance medical advisory application using RAG and Gemini AI for health record analysis, prioritizing data privacy and lightweight execution.",
+  "name": "MedAssist-IA Pro",
+  "description": "Système expert d'assistance clinique avec RAG scientifique, propulsé par Gemini 3 Pro. Analyse de dossiers patients, synthèse médicale et co-pilote de diagnostic avec chiffrement AES-256.",
   "requestFramePermissions": [
     "camera"
   ]

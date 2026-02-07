@@ -1,39 +1,37 @@
 
-# 🩺 MedAssist-IA - Guide d'Installation Local (VS Code)
+# 🩺 MedAssist-IA : Le Co-pilote Clinique Intelligent
 
-Ce guide vous explique comment lancer l'application sur votre ordinateur après avoir cloné le dépôt.
+MedAssist-IA est une plateforme d'assistance médicale de pointe conçue pour les praticiens. Elle exploite la puissance de **Gemini 3 Pro** et du **RAG (Retrieval-Augmented Generation)** pour fournir des analyses cliniques précises, sourcées et sécurisées.
 
-## 🛠️ Pré-requis
-1. **Node.js** installé sur votre machine (téléchargez sur nodejs.org).
-2. **VS Code** comme éditeur.
+## 🌟 Pourquoi MedAssist-IA ?
 
-## 🚀 Étapes pour visualiser le projet
+L'application agit comme un expert de second regard, capable de croiser les données brutes des patients (comptes-rendus, images, ordonnances) avec une base de données scientifique actualisée.
 
-1. **Ouvrez le terminal dans VS Code** (`Ctrl + J` ou `Cmd + J`).
-2. **Installez les outils nécessaires** (une seule fois) :
+### 🚀 Fonctionnalités Clés :
+- **🧠 IA Clinique de 3ème Génération** : Utilisation de Gemini 3 Pro pour un raisonnement médical complexe et une précision diagnostique accrue.
+- **📚 Mode Expertise (RAG Scientific)** : Intégration de protocoles HAS et d'études médicales réelles pour étayer chaque conseil par des preuves scientifiques.
+- **🖼️ OCR & Analyse Visuelle** : Analyse directe des scanners, radiographies et documents manuscrits grâce aux capacités multimodales de l'IA.
+- **🛡️ Sécurité de Niveau Médical** :
+    - Flux de données chiffrés en **AES-256**.
+    - Anonymisation automatique des données de santé (PII Masking).
+    - Zéro stockage permanent sur serveurs tiers (Local First).
+- **🌗 Design Fluide & Adaptatif** : Interface optimisée pour la pratique clinique avec mode sombre intelligent et ergonomie "Sans Friction".
+
+## 🛠️ Installation Technique
+
+1. **Clonage & Dépendances** :
    ```bash
    npm install
    ```
-3. **Configurez votre clé API** :
-   Créez un fichier nommé `.env` à la racine du projet et ajoutez votre clé dedans :
-   ```text
-   VITE_GEMINI_API_KEY=votre_cle_ici
-   ```
-   *(Note : Pour ce projet spécifique, l'application cherche `process.env.API_KEY`. Si vous utilisez Vite, lancez avec la commande ci-dessous).*
-
-4. **Lancez le serveur de développement** :
+2. **Configuration API** :
+   Ajoutez votre clé Gemini API dans vos variables d'environnement (`process.env.API_KEY`).
+3. **Lancement** :
    ```bash
    npm run dev
    ```
-5. **Ouvrez votre navigateur** à l'adresse qui s'affiche (généralement `http://localhost:5173`).
 
-## 📁 Structure et Développement
-- `App.tsx` : C'est ici que vous modifiez la logique principale.
-- `index.html` : Structure de base et importations via ESM.sh.
-- `services/geminiService.ts` : Gère les appels à l'IA.
-
-## 🔑 Note sur la Clé API
-Votre clé `AIzaSyCMz6...` est maintenant prête. Pour qu'elle fonctionne localement, assurez-vous de l'injecter dans votre environnement de terminal ou d'utiliser un outil comme Vite qui gère les fichiers `.env`.
+## 📋 Rappel de Conformité
+Cette application est un **outil d'aide à la décision** et ne remplace en aucun cas le jugement clinique du professionnel de santé. Toutes les données patient doivent être traitées avec la discrétion requise par le secret médical.
 
 ---
-Dernière mise à jour : Guide local ajouté.
+*MedAssist-IA : L'alliance de l'expertise médicale et de l'intelligence artificielle.*
