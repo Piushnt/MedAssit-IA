@@ -1,6 +1,6 @@
 
-import React from 'react';
-import { ShieldCheck, Activity, LogOut, LayoutDashboard, Users, FileText, History, Database } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ShieldCheck, Activity, LogOut, LayoutDashboard, Users, FileText, History, Database, Sun, Moon } from 'lucide-react';
 import { StorageService } from '../services/storageService';
 
 interface LayoutProps {
@@ -12,6 +12,18 @@ interface LayoutProps {
 }
 
 const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, doctorName, specialty }) => {
+  const [isDark, setIsDark] = useState(() => localStorage.getItem('theme') === 'dark');
+
+  useEffect(() => {
+    if (isDark) {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
+    }
+  }, [isDark]);
+
   const navItems = [
     { id: 'dashboard', icon: LayoutDashboard, label: 'Tableau de bord' },
     { id: 'patients', icon: Users, label: 'Mes Patients' },
@@ -28,7 +40,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, doct
   };
 
   return (
-    <div className="flex flex-col md:flex-row min-h-screen bg-slate-50 font-sans">
+    <div className="flex flex-col md:flex-row min-h-screen bg-slate-50 dark:bg-slate-950 font-sans">
       {/* Sidebar */}
       <aside className="w-full md:w-72 bg-slate-900 text-white p-8 flex flex-col sticky top-0 md:h-screen shadow-2xl z-20">
         <div className="flex items-center gap-4 mb-12 px-2">
@@ -64,7 +76,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, doct
               <ShieldCheck className="w-4 h-4" />
               <span className="absolute -top-1 -right-1 w-2 h-2 bg-emerald-500 rounded-full animate-ping"></span>
             </div>
-            <span className="text-[10px] font-black uppercase tracking-widest">Sécurité Active</span>
+            <span className="text-[10px] font-black uppercase tracking-widest">Flux Chiffré AES-256</span>
           </div>
           
           <button 
@@ -79,23 +91,34 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, doct
 
       {/* Main Content */}
       <main className="flex-1 relative overflow-y-auto">
-        <header className="sticky top-0 z-10 glass-morphism px-10 py-7 border-b border-slate-200/60 flex justify-between items-center">
+        <header className="sticky top-0 z-10 glass-morphism px-10 py-7 border-b border-slate-200/60 dark:border-white/5 flex justify-between items-center">
           <div className="flex flex-col">
             <span className="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em] mb-1.5">
               {navItems.find(i => i.id === activeTab)?.label}
             </span>
-            <h2 className="text-xl font-black text-slate-800 tracking-tight">
+            <h2 className="text-xl font-black text-slate-800 dark:text-white tracking-tight">
               Espace de Travail Clinique
             </h2>
           </div>
           
-          <div className="flex items-center gap-5">
-            <div className="text-right hidden sm:block">
-              <p className="text-sm font-black text-slate-800 leading-tight">Dr. {doctorName}</p>
-              <p className="text-[10px] text-indigo-500 font-black uppercase tracking-wider">{specialty}</p>
-            </div>
-            <div className="h-14 w-14 rounded-2xl bg-indigo-50 border border-indigo-100/50 flex items-center justify-center text-indigo-600 font-black text-xl shadow-sm">
-              {doctorName?.charAt(0)}
+          <div className="flex items-center gap-6">
+            {/* Theme Toggle Button */}
+            <button 
+              onClick={() => setIsDark(!isDark)}
+              className="p-3 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-yellow-400 hover:scale-110 active:scale-95 transition-all shadow-sm"
+              title={isDark ? "Passer au mode clair" : "Passer au mode sombre"}
+            >
+              {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+            </button>
+
+            <div className="flex items-center gap-5 border-l border-slate-200 dark:border-white/10 pl-6">
+              <div className="text-right hidden sm:block">
+                <p className="text-sm font-black text-slate-800 dark:text-slate-100 leading-tight">Dr. {doctorName}</p>
+                <p className="text-[10px] text-indigo-500 font-black uppercase tracking-wider">{specialty}</p>
+              </div>
+              <div className="h-14 w-14 rounded-2xl bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-100/50 dark:border-indigo-500/20 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-black text-xl shadow-sm">
+                {doctorName?.charAt(0)}
+              </div>
             </div>
           </div>
         </header>
