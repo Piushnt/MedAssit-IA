@@ -1,38 +1,39 @@
 
-# 🩺 MedAssist-IA - Guide du Développeur
+# 🩺 MedAssist-IA - Guide d'Installation Local (VS Code)
 
-Bienvenue dans le projet MedAssist-IA. Ce guide vous aidera à comprendre, visualiser et faire progresser l'application.
+Ce guide vous explique comment lancer l'application sur votre ordinateur après avoir cloné le dépôt.
 
-## 🚀 1. Visualisation du Projet
-L'application est construite comme une Single Page Application (SPA) moderne utilisant React, Tailwind CSS et l'API Google Gemini.
+## 🛠️ Pré-requis
+1. **Node.js** installé sur votre machine (téléchargez sur nodejs.org).
+2. **VS Code** comme éditeur.
 
-Pour visualiser le projet localement :
-1. Assurez-vous d'avoir un serveur local (ex: extension "Live Server" sur VS Code ou `npx serve`).
-2. Ouvrez le fichier `index.html` dans votre navigateur.
-Note : Le projet utilise des modules ES6 (`type="module"`) et le mapping d'import (`importmap`), ce qui permet de charger les dépendances (React, Lucide, etc.) directement via ESM.sh sans étape de compilation lourde.
+## 🚀 Étapes pour visualiser le projet
 
-## 📁 2. Structure des Fichiers
-- `index.html` : Point d'entrée unique, gère les styles globaux et le chargement des bibliothèques.
-- `index.tsx` : Initialise React et monte l'application.
-- `App.tsx` : Orchestrateur principal (gestion des onglets et du state global).
-- `types.ts` : Définitions TypeScript pour les documents et les logs.
-- `components/` : Contient les briques d'interface (Dashboard, Documents, Logs, Layout).
-- `services/` : Logique métier (Appels API Gemini, stockage local).
-- `utils/` : Fonctions utilitaires (Anonymisation, conversion de fichiers).
+1. **Ouvrez le terminal dans VS Code** (`Ctrl + J` ou `Cmd + J`).
+2. **Installez les outils nécessaires** (une seule fois) :
+   ```bash
+   npm install
+   ```
+3. **Configurez votre clé API** :
+   Créez un fichier nommé `.env` à la racine du projet et ajoutez votre clé dedans :
+   ```text
+   VITE_GEMINI_API_KEY=votre_cle_ici
+   ```
+   *(Note : Pour ce projet spécifique, l'application cherche `process.env.API_KEY`. Si vous utilisez Vite, lancez avec la commande ci-dessous).*
 
-## 🛡️ 3. Sécurité et Confidentialité
-- **Anonymisation** : Le fichier `utils/anonymizer.ts` contient une logique qui masque les données sensibles (emails, noms, téléphones) avant l'envoi à l'IA.
-- **Stockage Local** : Les documents sont stockés uniquement dans le `localStorage` de votre navigateur. Aucune donnée n'est persistée sur un serveur tiers, à l'exception des données envoyées à Gemini pour analyse.
+4. **Lancez le serveur de développement** :
+   ```bash
+   npm run dev
+   ```
+5. **Ouvrez votre navigateur** à l'adresse qui s'affiche (généralement `http://localhost:5173`).
 
-## 🤖 4. Intelligence Artificielle (Gemini)
-L'application utilise le modèle `gemini-3-flash-preview` pour un équilibre optimal entre vitesse et précision médicale.
-- La clé API est récupérée via `process.env.API_KEY`.
-- Le prompt système (dans `services/geminiService.ts`) impose un cadre strict : analyse basée sur les faits et avertissements médicaux obligatoires.
+## 📁 Structure et Développement
+- `App.tsx` : C'est ici que vous modifiez la logique principale.
+- `index.html` : Structure de base et importations via ESM.sh.
+- `services/geminiService.ts` : Gère les appels à l'IA.
 
-## 🛠 5. Prochaines Étapes prévues
-- Amélioration de l'OCR pour les ordonnances manuscrites.
-- Ajout d'un mode "Urgence" avec détection de mots-clés critiques.
-- Exportation des rapports de santé en PDF.
+## 🔑 Note sur la Clé API
+Votre clé `AIzaSyCMz6...` est maintenant prête. Pour qu'elle fonctionne localement, assurez-vous de l'injecter dans votre environnement de terminal ou d'utiliser un outil comme Vite qui gère les fichiers `.env`.
 
 ---
-Dernière mise à jour : Mars 2024
+Dernière mise à jour : Guide local ajouté.

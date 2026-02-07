@@ -4,25 +4,27 @@ import { HealthDocument } from "../types";
 
 export const queryGemini = async (
   prompt: string,
-  documents: HealthDocument[]
+  documents: HealthDocument[],
+  isSummaryRequest: boolean = false
 ): Promise<string> => {
   const apiKey = process.env.API_KEY;
   if (!apiKey) throw new Error("API Key is missing");
 
   const ai = new GoogleGenAI({ apiKey });
   
-  // Prepare contents: Instructions + Context Documents + User Prompt
-  const parts: any[] = [
-    { text: `You are MedAssist-IA, a highly expert medical advisory agent. 
-    Analyze the provided medical records (if any) and answer the user query accurately.
-    IMPORTANT: 
-    1. Provide data-driven insights based ONLY on the documents and medical best practices.
-    2. ALWAYS include a prominent disclaimer: "Disclaimer: This is AI-generated advice and not a substitute for professional medical consultation. Always consult a certified physician."
-    3. If the documents contain sensitive information, acknowledge it professionally.
-    4. Focus on clarity and actionable health steps.` }
-  ];
+  const systemInstruction = `You are MedAssist-IA, a medical advisory expert.
+  CONTEXT: You have access to the user's health records.
+  
+  RULES:
+  1. EMERGENCY DETECTION: If the user describes life-threatening symptoms (chest pain, severe bleeding, difficulty breathing, stroke signs), you MUST start your response with "⚠️ URGENCE CRITIQUE DETECTÉE" and advise calling emergency services immediately (15/112).
+  2. DATA-DRIVEN: Only use the documents provided for specific medical facts.
+  3. DISCLAIMER: Always include: "Note: Ce conseil est généré par IA et ne remplace pas un médecin."
+  4. LANGUAGE: Always respond in French.
+  
+  ${isSummaryRequest ? "TASK: Provide a comprehensive summary of the user's health history based on all provided documents. Look for trends (e.g., rising glucose, consistent blood pressure)." : ""}`;
 
-  // Add documents as parts if they are images or text
+  const parts: any[] = [{ text: systemInstruction }];
+
   documents.forEach((doc) => {
     if (doc.mimeType.startsWith('image/')) {
       parts.push({
@@ -31,23 +33,27 @@ export const queryGemini = async (
           mimeType: doc.mimeType
         }
       });
-      parts.push({ text: `Document Name: ${doc.name}` });
+      parts.push({ text: `Document: ${doc.name}` });
     } else {
-      parts.push({ text: `Context from ${doc.name}:\n${doc.content}` });
+      parts.push({ text: `Contenu de ${doc.name}:\n${doc.content}` });
     }
   });
 
-  parts.push({ text: `User Query: ${prompt}` });
+  parts.push({ text: `Requête utilisateur: ${prompt}` });
 
   try {
     const response: GenerateContentResponse = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview', // High performance & low latency
+      model: 'gemini-3-flash-preview',
       contents: { parts },
+      config: {
+        temperature: 0.2, // Plus bas pour plus de précision factuelle
+        topP: 0.8,
+      }
     });
 
-    return response.text || "I'm sorry, I couldn't generate a response.";
+    return response.text || "Erreur de génération.";
   } catch (error) {
-    console.error("Gemini API Error:", error);
-    return "Error communicating with the medical intelligence engine.";
+    console.error("Gemini Error:", error);
+    return "Impossible de contacter l'intelligence médicale.";
   }
 };
