@@ -20,18 +20,17 @@ const App: React.FC = () => {
   useEffect(() => {
     const savedDoc = StorageService.getDoctor();
     const savedPatients = StorageService.getPatients();
-    // Charge les documents globaux (non liés à un patient spécifique)
-    const savedDocs = JSON.parse(localStorage.getItem('med_global_docs') || '[]');
+    const savedGlobalDocs = StorageService.getGlobalDocs();
     
     setDoctor(savedDoc);
     setPatients(savedPatients);
-    setGlobalDocs(savedDocs);
+    setGlobalDocs(savedGlobalDocs);
     setIsInitializing(false);
   }, []);
 
   const saveGlobalDocs = (docs: HealthDocument[]) => {
     setGlobalDocs(docs);
-    localStorage.setItem('med_global_docs', JSON.stringify(docs));
+    StorageService.saveGlobalDocs(docs);
   };
 
   const allLogs = patients.flatMap(p => p.consultations).sort((a, b) => b.timestamp - a.timestamp);
@@ -68,14 +67,23 @@ const App: React.FC = () => {
       {activeTab === 'database' && <DatabaseViewer specialty={doctor.specialty} />}
       
       {activeTab === 'documents' && (
-        <div className="space-y-8">
-          <div className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm">
-            <h3 className="text-xl font-extrabold text-slate-800 mb-2">Documents Généraux</h3>
-            <p className="text-slate-400 text-sm mb-8">Uploadez ici vos protocoles de service ou documents transversaux.</p>
-            <DocumentManager 
-              documents={globalDocs} 
-              setDocuments={saveGlobalDocs} 
-            />
+        <div className="space-y-10 animate-in fade-in duration-700">
+          <div className="max-w-5xl mx-auto">
+            <div className="bg-white p-12 rounded-[3.5rem] border border-slate-100 shadow-sm relative overflow-hidden">
+               <div className="absolute top-0 right-0 w-80 h-80 bg-indigo-50/40 rounded-full blur-3xl -mr-40 -mt-40"></div>
+               
+               <div className="relative z-10">
+                <h3 className="text-2xl font-black text-slate-800 mb-3 tracking-tight">Mes Protocoles & Ressources</h3>
+                <p className="text-slate-400 font-medium mb-12 max-w-xl leading-relaxed">
+                  Bibliothèque transversale utilisée comme contexte additionnel par l'IA (Protocoles HAS, guides de service).
+                </p>
+                
+                <DocumentManager 
+                  documents={globalDocs} 
+                  setDocuments={saveGlobalDocs} 
+                />
+               </div>
+            </div>
           </div>
         </div>
       )}
