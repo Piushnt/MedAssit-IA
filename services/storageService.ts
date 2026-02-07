@@ -1,34 +1,31 @@
 
-import { HealthDocument, AdviceLog } from '../types';
+import { Patient, Doctor } from '../types';
 
-const STORAGE_KEYS = {
-  DOCUMENTS: 'medassist_documents',
-  LOGS: 'medassist_logs',
+const KEYS = {
+  DOCTOR: 'med_pro_profile',
+  PATIENTS: 'med_pro_patients',
 };
 
 export const StorageService = {
-  saveDocuments: (docs: HealthDocument[]) => {
-    localStorage.setItem(STORAGE_KEYS.DOCUMENTS, JSON.stringify(docs));
+  saveDoctor: (doctor: Doctor) => localStorage.setItem(KEYS.DOCTOR, JSON.stringify(doctor)),
+  getDoctor: (): Doctor | null => {
+    const d = localStorage.getItem(KEYS.DOCTOR);
+    return d ? JSON.parse(d) : null;
   },
-
-  getDocuments: (): HealthDocument[] => {
-    const stored = localStorage.getItem(STORAGE_KEYS.DOCUMENTS);
-    return stored ? JSON.parse(stored) : [];
+  
+  savePatients: (patients: Patient[]) => localStorage.setItem(KEYS.PATIENTS, JSON.stringify(patients)),
+  getPatients: (): Patient[] => {
+    const p = localStorage.getItem(KEYS.PATIENTS);
+    return p ? JSON.parse(p) : [];
   },
-
-  saveLog: (log: AdviceLog) => {
-    const logs = StorageService.getLogs();
-    const updated = [log, ...logs].slice(0, 100); // Keep last 100
-    localStorage.setItem(STORAGE_KEYS.LOGS, JSON.stringify(updated));
-  },
-
-  getLogs: (): AdviceLog[] => {
-    const stored = localStorage.getItem(STORAGE_KEYS.LOGS);
-    return stored ? JSON.parse(stored) : [];
+  
+  addPatient: (patient: Patient) => {
+    const ps = StorageService.getPatients();
+    StorageService.savePatients([patient, ...ps]);
   },
 
   clearAll: () => {
-    localStorage.removeItem(STORAGE_KEYS.DOCUMENTS);
-    localStorage.removeItem(STORAGE_KEYS.LOGS);
+    localStorage.removeItem(KEYS.DOCTOR);
+    localStorage.removeItem(KEYS.PATIENTS);
   }
 };

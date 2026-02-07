@@ -1,0 +1,35 @@
+
+[
+  {
+    "id": "CARD-001",
+    "titre": "ESC 2024: Gestion de la Fibrillation Atriale",
+    "specialite": "Cardiologie",
+    "date_publication": "2024-01-15",
+    "niveau_preuve": "A",
+    "contenu_texte": "L'anticoagulation orale est recommandée chez les patients avec un score CHA2DS2-VASc >= 2. Les anticoagulants oraux directs (AOD) sont préférables aux AVK. La cardioversion doit être précédée d'une ETO si l'arythmie date de > 48h."
+  },
+  {
+    "id": "CARD-002",
+    "titre": "Étude SPRINT: Cibles de Pression Artérielle",
+    "specialite": "Cardiologie",
+    "date_publication": "2023-11-20",
+    "niveau_preuve": "B",
+    "contenu_texte": "Une cible de PAS < 120 mmHg réduit significativement les événements cardiovasculaires majeurs par rapport à une cible < 140 mmHg chez les patients à haut risque, malgré une augmentation des effets indésirables rénaux."
+  },
+  {
+    "id": "ENDO-001",
+    "titre": "ADA 2024: Nouvelles Recommandations Diabète T2",
+    "specialite": "Endocrinologie",
+    "date_publication": "2024-02-10",
+    "niveau_preuve": "A",
+    "contenu_texte": "L'utilisation précoce des agonistes des récepteurs GLP-1 et des inhibiteurs SGLT2 est recommandée chez les patients présentant une maladie cardiovasculaire athéroscléreuse établie ou une maladie rénale chronique."
+  },
+  {
+    "id": "GEN-001",
+    "titre": "Protocole HAS: Prise en charge de la Migraine",
+    "specialite": "Médecine Générale",
+    "date_publication": "2023-05-05",
+    "niveau_preuve": "A",
+    "contenu_texte": "Les triptans doivent être pris dès le début de la phase céphalalgique. Un traitement de fond est justifié si > 2 crises handicapantes par mois malgré un traitement de crise optimal."
+  }
+]

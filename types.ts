@@ -1,12 +1,40 @@
 
+export interface MedicalStudy {
+  id: string;
+  titre: string;
+  specialite: string;
+  date_publication: string;
+  niveau_preuve: 'A' | 'B' | 'C';
+  contenu_texte: string;
+}
+
 export interface HealthDocument {
   id: string;
   name: string;
   type: string;
-  content: string; // Base64 for images or extracted text
+  content: string; 
   mimeType: string;
   timestamp: number;
-  anonymized: boolean;
+  anonymized?: boolean;
+}
+
+export interface Patient {
+  id: string;
+  nomAnonymise: string;
+  age: number;
+  antecedents: string;
+  sexe: 'M' | 'F' | 'Autre';
+  documents: HealthDocument[];
+  consultations: AdviceLog[];
+}
+
+export interface Doctor {
+  id: string;
+  name: string;
+  specialty: string;
+  licenseNumber: string;
+  isVerified: boolean;
+  idCardPhoto?: string;
 }
 
 export interface AdviceLog {
@@ -14,10 +42,5 @@ export interface AdviceLog {
   timestamp: number;
   query: string;
   response: string;
-  sources: string[];
-}
-
-export interface UserState {
-  documents: HealthDocument[];
-  logs: AdviceLog[];
+  sources: string[]; // IDs des études citées
 }
