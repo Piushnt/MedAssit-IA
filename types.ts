@@ -42,5 +42,21 @@ export interface AdviceLog {
   timestamp: number;
   query: string;
   response: string;
-  sources: string[]; // IDs des études citées
+  sources: string[];
+}
+
+export interface AuditEntry {
+  id: string;
+  timestamp: number;
+  action: string;
+  user: string;
+  resourceId?: string;
+  severity: 'low' | 'medium' | 'high';
+}
+
+export interface ScribeSession {
+  id: string;
+  startTime: number;
+  transcript: string;
+  summary?: string;
 }
