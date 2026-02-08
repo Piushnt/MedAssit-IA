@@ -35,7 +35,12 @@ const App: React.FC = () => {
     StorageService.saveGlobalDocs(docs);
   };
 
-  const allLogs = patients.flatMap(p => p.consultations).sort((a, b) => b.timestamp - a.timestamp);
+  const handleAddLog = (patientId: string, log: AdviceLog) => {
+    const updatedPatients = StorageService.addConsultationToPatient(patientId, log);
+    setPatients(updatedPatients);
+  };
+
+  const allLogs = patients.flatMap(p => p.consultations || []).sort((a, b) => b.timestamp - a.timestamp);
 
   if (isInitializing) return null;
 
@@ -53,7 +58,7 @@ const App: React.FC = () => {
       doctorName={doctor.name}
       specialty={doctor.specialty}
     >
-      {activeTab === 'dashboard' && <Dashboard doctor={doctor} patients={patients} />}
+      {activeTab === 'dashboard' && <Dashboard doctor={doctor} patients={patients} addLog={handleAddLog} />}
       {activeTab === 'scribe' && <Scribe />}
       {activeTab === 'patients' && (
         <PatientManager 
@@ -84,7 +89,7 @@ const App: React.FC = () => {
         </div>
       )}
       
-      {activeTab === 'logs' && <LogViewer logs={allLogs} />}
+      {(activeTab === 'logs' || activeTab === 'audit_logs') && <LogViewer logs={allLogs} />}
     </Layout>
   );
 };

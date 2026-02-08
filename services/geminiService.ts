@@ -2,8 +2,14 @@
 import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
 import { HealthDocument, MedicalStudy, Patient, Doctor } from "../types";
 
-// Export LocalStudy as an alias for MedicalStudy as expected by Dashboard
 export type LocalStudy = MedicalStudy;
+
+/**
+ * Utility to clean base64 string from data URL prefixes
+ */
+const cleanBase64 = (base64: string): string => {
+  return base64.replace(/^data:.*?;base64,/, "");
+};
 
 /**
  * Main query function for medical analysis and summaries using Gemini API
@@ -17,12 +23,11 @@ export const queryGemini = async (
   const apiKey = process.env.API_KEY;
   if (!apiKey) throw new Error("API Key is missing from environment variables");
 
-  // Initialize the Google GenAI client following guidelines
   const ai = new GoogleGenAI({ apiKey: apiKey });
   
   const systemInstruction = isSummary 
     ? "Vous êtes un assistant IA médical expert. Générez une synthèse clinique structurée, objective et exhaustive basée sur les documents fournis. Identifiez les tendances et les points d'alerte."
-    : "Vous êtes un assistant IA médical expert. Répondez aux questions cliniques en vous appuyant exclusivement sur les documents du patient et les études scientifiques fournies. Citez vos sources avec [ID].";
+    : "Vous êtes un assistant IA médical expert. Répondez aux questions cliniques en vous appuyant exclusivement sur les documents du patient et les études scientifiques fournies. Citez vos sources avec [ID]. Si une situation semble critique, commencez par '⚠️ URGENCE CRITIQUE'.";
 
   const parts: any[] = [{ text: systemInstruction }];
 
@@ -30,7 +35,10 @@ export const queryGemini = async (
   documents.forEach((doc) => {
     if (doc.mimeType.startsWith('image/')) {
       parts.push({
-        inlineData: { data: doc.content, mimeType: doc.mimeType }
+        inlineData: { 
+          data: cleanBase64(doc.content), 
+          mimeType: doc.mimeType 
+        }
       });
       parts.push({ text: `Document visuel (ID: ${doc.id}): ${doc.name}` });
     } else {
@@ -48,16 +56,15 @@ export const queryGemini = async (
   parts.push({ text: `Requête médicale :\n${prompt}` });
 
   try {
-    // Using gemini-3-pro-preview for complex reasoning and medical analysis
+    // Using gemini-3-flash-preview for speed and efficiency on mid-range hardware
     const response: GenerateContentResponse = await ai.models.generateContent({
-      model: 'gemini-3-pro-preview',
+      model: 'gemini-3-flash-preview',
       contents: { parts },
       config: {
-        temperature: 0.1, // Set to low for maximum medical precision
+        temperature: 0.1,
       }
     });
 
-    // Directly access the .text property of GenerateContentResponse
     return response.text || "Désolé, l'analyse n'a pas pu être finalisée.";
   } catch (error) {
     console.error("Gemini Diagnostic Error:", error);
@@ -66,7 +73,34 @@ export const queryGemini = async (
 };
 
 /**
- * Specific function for clinical copilot reasoning, utilizing queryGemini
+ * Specific function for clinical SOAP note generation
+ */
+export const generateSOAPNote = async (transcript: string): Promise<string> => {
+  const apiKey = process.env.API_KEY;
+  if (!apiKey) throw new Error("API Key is missing");
+
+  const ai = new GoogleGenAI({ apiKey: apiKey });
+  
+  const prompt = `En tant qu'assistant médical expert, transforme la transcription de consultation suivante en une note clinique structurée au format SOAP (Subjectif, Objectif, Appréciation, Plan). Ajoute impérativement le disclaimer légal à la fin.\n\nTRANSCRIPTION :\n${transcript}`;
+
+  try {
+    const response: GenerateContentResponse = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: prompt,
+      config: {
+        temperature: 0.2,
+      }
+    });
+
+    return response.text || "Erreur de génération du SOAP.";
+  } catch (error) {
+    console.error("SOAP Generation Error:", error);
+    return "Échec de la structuration de la note clinique.";
+  }
+};
+
+/**
+ * Specific function for clinical copilot reasoning
  */
 export const queryMedicalCopilot = async (
   doctor: Doctor,
@@ -74,6 +108,5 @@ export const queryMedicalCopilot = async (
   observation: string,
   relevantStudies: MedicalStudy[]
 ): Promise<string> => {
-  // Leverage the primary query function
   return queryGemini(observation, patient.documents, false, relevantStudies);
 };

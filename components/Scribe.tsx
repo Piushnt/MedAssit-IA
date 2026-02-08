@@ -1,8 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-// Added ShieldCheck to the list of imported icons from lucide-react
-import { Mic, MicOff, Loader2, FileText, CheckCircle, Save, Sparkles, Activity, ShieldCheck } from 'lucide-react';
-import { GoogleGenAI, Modality } from '@google/genai';
+import { Mic, MicOff, Loader2, FileText, Save, Sparkles, Activity, ShieldCheck } from 'lucide-react';
+import { generateSOAPNote } from '../services/geminiService';
 
 const Scribe: React.FC = () => {
   const [isRecording, setIsRecording] = useState(false);
@@ -11,8 +10,6 @@ const Scribe: React.FC = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const recognitionRef = useRef<any>(null);
 
-  // Simulation de Scribe Ambiant via Web Speech API pour le prototype UI
-  // En production, on utiliserait le flux PCM vers Gemini Live API
   useEffect(() => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (SpeechRecognition) {
@@ -26,7 +23,12 @@ const Scribe: React.FC = () => {
         for (let i = event.resultIndex; i < event.results.length; i++) {
           currentTranscript += event.results[i][0].transcript;
         }
-        setTranscript(currentTranscript);
+        setTranscript(prev => prev + " " + currentTranscript);
+      };
+
+      recognitionRef.current.onerror = (event: any) => {
+        console.error("Speech Recognition Error:", event.error);
+        setIsRecording(false);
       };
     }
   }, []);
@@ -35,24 +37,33 @@ const Scribe: React.FC = () => {
     if (isRecording) {
       recognitionRef.current?.stop();
       setIsRecording(false);
-      handleSummarize();
+      if (transcript.trim()) {
+        handleSummarize();
+      }
     } else {
       setTranscript('');
       setSummary('');
-      recognitionRef.current?.start();
-      setIsRecording(true);
+      try {
+        recognitionRef.current?.start();
+        setIsRecording(true);
+      } catch (err) {
+        console.error("Failed to start recognition:", err);
+      }
     }
   };
 
   const handleSummarize = async () => {
-    if (!transcript) return;
+    if (!transcript.trim()) return;
     setIsProcessing(true);
     
-    // Appel simulé à Gemini pour structurer la note
-    setTimeout(() => {
-      setSummary(`### NOTE CLINIQUE (SOAP)\n\n**Subjectif :** Patient rapporte une fatigue persistante depuis 2 semaines.\n**Objectif :** Tension 135/85, Pouls 72.\n**Appréciation :** Syndrome de fatigue chronique suspecté.\n**Plan :** Bilan sanguin complet (NFS, Ferritine, TSH).`);
+    try {
+      const soapNote = await generateSOAPNote(transcript);
+      setSummary(soapNote);
+    } catch (err) {
+      setSummary("Une erreur est survenue lors de la structuration de la note.");
+    } finally {
       setIsProcessing(false);
-    }, 2000);
+    }
   };
 
   return (
@@ -65,13 +76,13 @@ const Scribe: React.FC = () => {
               {isRecording ? <Mic className="w-10 h-10 text-white" /> : <Mic className="w-10 h-10" />}
             </div>
             <h3 className="text-xl font-bold text-slate-800 dark:text-white">Scribe Ambiant</h3>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">Écoute et structure votre consultation en temps réel.</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">Écoute et structure votre consultation en temps réel via Gemini 3 Flash.</p>
             
             <button 
               onClick={toggleRecording}
               className={`w-full mt-8 py-4 rounded-2xl font-bold flex items-center justify-center gap-3 transition-all ${isRecording ? 'bg-slate-800 text-white' : 'bg-indigo-600 text-white shadow-xl shadow-indigo-500/20 hover:scale-105'}`}
             >
-              {isRecording ? <><MicOff className="w-5 h-5" /> Arrêter</> : <><Mic className="w-5 h-5" /> Démarrer l'écoute</>}
+              {isRecording ? <><MicOff className="w-5 h-5" /> Arrêter & Générer SOAP</> : <><Mic className="w-5 h-5" /> Démarrer l'écoute</>}
             </button>
           </div>
 
@@ -81,7 +92,7 @@ const Scribe: React.FC = () => {
               <span className="text-sm uppercase tracking-wider">Confidentialité</span>
             </div>
             <p className="text-xs text-emerald-600/80 dark:text-emerald-400/60 leading-relaxed">
-              Le flux audio est traité localement puis chiffré. Aucune donnée vocale n'est stockée de façon permanente.
+              Le flux audio est traité par l'IA de façon sécurisée. Aucune donnée vocale n'est stockée après traitement.
             </p>
           </div>
         </div>
@@ -115,7 +126,7 @@ const Scribe: React.FC = () => {
               {isProcessing && (
                 <div className="flex items-center gap-3 py-4 bg-indigo-50 dark:bg-indigo-900/20 px-6 rounded-2xl animate-pulse">
                   <Loader2 className="w-5 h-5 text-indigo-600 animate-spin" />
-                  <span className="text-sm font-bold text-indigo-600 dark:text-indigo-400">Génération de la note structurée par Gemini...</span>
+                  <span className="text-sm font-bold text-indigo-600 dark:text-indigo-400">Génération SOAP par Gemini...</span>
                 </div>
               )}
 
@@ -123,7 +134,7 @@ const Scribe: React.FC = () => {
                 <div className="animate-in slide-in-from-bottom-4 duration-500 space-y-4">
                   <div className="flex items-center gap-2 text-emerald-500">
                     <Sparkles className="w-4 h-4" />
-                    <span className="text-[10px] font-bold uppercase tracking-widest">Synthèse Structurée (IA)</span>
+                    <span className="text-[10px] font-bold uppercase tracking-widest">Synthèse Structurée SOAP</span>
                   </div>
                   <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-3xl border border-slate-100 dark:border-white/5 text-slate-700 dark:text-slate-200 font-medium whitespace-pre-wrap leading-relaxed shadow-inner">
                     {summary}

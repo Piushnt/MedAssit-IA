@@ -1,5 +1,5 @@
 
-import { Patient, Doctor } from '../types';
+import { Patient, Doctor, AdviceLog } from '../types';
 
 const KEYS = {
   DOCTOR: 'med_pro_profile',
@@ -29,6 +29,18 @@ export const StorageService = {
   addPatient: (patient: Patient) => {
     const ps = StorageService.getPatients();
     StorageService.savePatients([patient, ...ps]);
+  },
+
+  addConsultationToPatient: (patientId: string, log: AdviceLog) => {
+    const patients = StorageService.getPatients();
+    const updatedPatients = patients.map(p => {
+      if (p.id === patientId) {
+        return { ...p, consultations: [log, ...(p.consultations || [])] };
+      }
+      return p;
+    });
+    StorageService.savePatients(updatedPatients);
+    return updatedPatients;
   },
 
   logout: () => {
