@@ -1,8 +1,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { Send, Bot, Loader2, Info, Sparkles, AlertTriangle, PhoneCall, BookOpen, Zap, UserCheck } from 'lucide-react';
-import { HealthDocument, AdviceLog, Doctor, Patient } from '../types';
-import { queryGemini, LocalStudy } from '../services/geminiService';
+import { HealthDocument, AdviceLog, Doctor, Patient, MedicalStudy } from '../types';
+// Fixed: Removed missing LocalStudy import from geminiService
+import { queryGemini } from '../services/geminiService';
 
 interface DashboardProps {
   doctor: Doctor;
@@ -26,7 +27,8 @@ const Dashboard: React.FC<DashboardProps> = ({
   const documents = selectedPatient ? selectedPatient.documents : patients.flatMap(p => p.documents);
   
   const [isExpertMode, setIsExpertMode] = useState(false);
-  const [localStudies, setLocalStudies] = useState<LocalStudy[]>([]);
+  // Fixed: Replaced missing LocalStudy type with MedicalStudy from types.ts
+  const [localStudies, setLocalStudies] = useState<MedicalStudy[]>([]);
 
   useEffect(() => {
     fetch('/data/medical_database.json')
