@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import Layout from './components/Layout.tsx';
 import Auth from './components/Auth.tsx';
@@ -18,6 +17,10 @@ const App: React.FC = () => {
   const [globalDocs, setGlobalDocs] = useState<HealthDocument[]>([]);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isInitializing, setIsInitializing] = useState(true);
+  
+  // State pour la sauvegarde automatique
+  const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'error'>('saved');
+  const [lastSaved, setLastSaved] = useState<number>(Date.now());
 
   useEffect(() => {
     const savedDoc = StorageService.getDoctor();
@@ -30,11 +33,34 @@ const App: React.FC = () => {
     setIsInitializing(false);
   }, []);
 
-  // Fix: Updated to support functional updates for DocumentManager to prevent race conditions during multiple sync updates
+  // Heartbeat de sauvegarde toutes les 5 minutes
+  useEffect(() => {
+    if (!doctor) return;
+    
+    const pulse = setInterval(() => {
+      handleForceSave();
+    }, 5 * 60 * 1000); // 5 minutes
+
+    return () => clearInterval(pulse);
+  }, [doctor, patients, globalDocs]);
+
+  const handleForceSave = () => {
+    setSaveStatus('saving');
+    try {
+      StorageService.savePatients(patients);
+      StorageService.saveGlobalDocs(globalDocs);
+      setLastSaved(Date.now());
+      setTimeout(() => setSaveStatus('saved'), 1500);
+    } catch (e) {
+      setSaveStatus('error');
+    }
+  };
+
   const saveGlobalDocs = (docsOrFn: HealthDocument[] | ((prev: HealthDocument[]) => HealthDocument[])) => {
     setGlobalDocs(prev => {
       const next = typeof docsOrFn === 'function' ? docsOrFn(prev) : docsOrFn;
       StorageService.saveGlobalDocs(next);
+      setLastSaved(Date.now());
       return next;
     });
   };
@@ -42,6 +68,7 @@ const App: React.FC = () => {
   const handleAddLog = (patientId: string, log: AdviceLog) => {
     const updatedPatients = StorageService.addConsultationToPatient(patientId, log);
     setPatients(updatedPatients);
+    setLastSaved(Date.now());
   };
 
   const allLogs = patients.flatMap(p => p.consultations || []).sort((a, b) => b.timestamp - a.timestamp);
@@ -61,17 +88,19 @@ const App: React.FC = () => {
       setActiveTab={setActiveTab} 
       doctorName={doctor.name}
       specialty={doctor.specialty}
+      saveStatus={saveStatus}
+      lastSaved={lastSaved}
     >
       {activeTab === 'dashboard' && <Dashboard doctor={doctor} patients={patients} addLog={handleAddLog} />}
       {activeTab === 'scribe' && <Scribe />}
       {activeTab === 'patients' && (
         <PatientManager 
           patients={patients} 
-          // Fix: Updated to support functional updates from PatientManager to safely update specific patient data
           setPatients={(pOrFn) => {
             setPatients(prev => {
               const next = typeof pOrFn === 'function' ? pOrFn(prev) : pOrFn;
               StorageService.savePatients(next);
+              setLastSaved(Date.now());
               return next;
             });
           }} 

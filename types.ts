@@ -1,4 +1,3 @@
-
 export interface MedicalStudy {
   id: string;
   titre: string;
@@ -17,6 +16,7 @@ export interface HealthDocument {
   timestamp: number;
   anonymized?: boolean;
   analysisSummary?: string;
+  pageCount?: number; // Nouveau: Nombre de pages pour PDF/Images groupées
 }
 
 export interface VitalEntry {
@@ -24,6 +24,14 @@ export interface VitalEntry {
   bmi?: number;
   bp?: string; // Format "120/80"
   hr?: number;
+}
+
+export interface Appointment {
+  id: string;
+  date: string;
+  time: string;
+  reason: string;
+  status: 'scheduled' | 'reminded' | 'completed' | 'cancelled';
 }
 
 export interface Patient {
@@ -38,6 +46,7 @@ export interface Patient {
   consultations: AdviceLog[];
   vitalSigns?: VitalEntry;
   vitalsHistory: VitalEntry[];
+  appointments: Appointment[]; // Nouveau: Gestion des RDV
 }
 
 export interface Doctor {

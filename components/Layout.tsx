@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect } from 'react';
-import { ShieldCheck, Activity, LogOut, LayoutDashboard, Users, FileText, History, Database, Sun, Moon, Mic, Lock } from 'lucide-react';
+import { ShieldCheck, Activity, LogOut, LayoutDashboard, Users, FileText, History, Database, Sun, Moon, Mic, Lock, RefreshCcw, CheckCircle, AlertCircle } from 'lucide-react';
 import { StorageService } from '../services/storageService';
 
 interface LayoutProps {
@@ -9,9 +8,11 @@ interface LayoutProps {
   setActiveTab: (tab: string) => void;
   doctorName?: string;
   specialty?: string;
+  saveStatus?: 'saved' | 'saving' | 'error';
+  lastSaved?: number;
 }
 
-const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, doctorName, specialty }) => {
+const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, doctorName, specialty, saveStatus = 'saved', lastSaved }) => {
   const [isDark, setIsDark] = useState(() => localStorage.getItem('theme') === 'dark');
 
   useEffect(() => {
@@ -42,14 +43,14 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, doct
 
   return (
     <div className="flex flex-col md:flex-row min-h-screen bg-slate-50 dark:bg-slate-950 font-sans">
-      <aside className="w-full md:w-72 bg-slate-900 text-white p-8 flex flex-col sticky top-0 md:h-screen shadow-2xl z-20">
+      <aside className="w-full md:w-72 bg-slate-900 text-white p-8 flex flex-col sticky top-0 md:h-screen shadow-2xl z-20 transition-all">
         <div className="flex items-center gap-4 mb-12 px-2">
           <div className="bg-indigo-500 p-2.5 rounded-[1.25rem] shadow-lg shadow-indigo-500/20">
             <Activity className="w-6 h-6 text-white" />
           </div>
           <div>
             <h1 className="text-xl font-black tracking-tight leading-none">MedAssist Pro</h1>
-            <span className="text-[10px] text-indigo-400 font-black uppercase tracking-[0.4em]">Scribe & Expert</span>
+            <span className="text-[10px] text-indigo-400 font-black uppercase tracking-[0.4em]">Local-First AI</span>
           </div>
         </div>
 
@@ -60,7 +61,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, doct
               onClick={() => setActiveTab(item.id)}
               className={`w-full flex items-center gap-4 px-5 py-3.5 rounded-2xl transition-all duration-300 group ${
                 activeTab === item.id 
-                  ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20' 
+                  ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20 scale-[1.02]' 
                   : 'text-slate-400 hover:bg-slate-800 hover:text-white'
               }`}
             >
@@ -72,26 +73,37 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, doct
 
         <div className="mt-auto pt-8 border-t border-slate-800">
           <div className="flex items-center gap-3 px-4 py-3 bg-slate-800/40 rounded-2xl text-emerald-400 mb-6 border border-white/5">
-            <div className="relative">
-              <ShieldCheck className="w-4 h-4" />
-              <span className="absolute -top-1 -right-1 w-2 h-2 bg-emerald-500 rounded-full animate-ping"></span>
-            </div>
-            <span className="text-[10px] font-black uppercase tracking-widest">Flux Chiffré AES-256</span>
+            <ShieldCheck className="w-4 h-4" />
+            <span className="text-[10px] font-black uppercase tracking-widest">AES-256 Actif</span>
           </div>
           
-          <button onClick={handleLogout} className="flex items-center gap-4 px-5 py-4 w-full text-slate-400 hover:text-red-400 transition-all hover:bg-red-500/10 rounded-2xl">
-            <LogOut className="w-5 h-5" />
-            <span className="font-bold text-sm">Déconnexion</span>
+          <button onClick={handleLogout} className="flex items-center gap-4 px-5 py-4 w-full text-slate-400 hover:text-red-400 transition-all hover:bg-red-500/10 rounded-2xl group">
+            <LogOut className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
+            <span className="font-bold text-sm">Quitter</span>
           </button>
         </div>
       </aside>
 
       <main className="flex-1 relative overflow-y-auto">
-        <header className="sticky top-0 z-10 glass-morphism px-10 py-7 border-b border-slate-200/60 dark:border-white/5 flex justify-between items-center">
+        <header className="sticky top-0 z-10 glass-morphism px-10 py-6 border-b border-slate-200/60 dark:border-white/5 flex justify-between items-center transition-all">
           <div className="flex flex-col">
-            <span className="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em] mb-1.5">
-              {navItems.find(i => i.id === activeTab)?.label}
-            </span>
+            <div className="flex items-center gap-3 mb-1">
+              <span className="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em]">
+                {navItems.find(i => i.id === activeTab)?.label}
+              </span>
+              <div className="flex items-center gap-1.5 px-2 py-0.5 bg-slate-100 dark:bg-slate-800 rounded-full border border-slate-200 dark:border-white/5">
+                {saveStatus === 'saving' ? (
+                  <RefreshCcw className="w-2.5 h-2.5 text-indigo-500 animate-spin" />
+                ) : saveStatus === 'error' ? (
+                  <AlertCircle className="w-2.5 h-2.5 text-red-500" />
+                ) : (
+                  <CheckCircle className="w-2.5 h-2.5 text-emerald-500" />
+                )}
+                <span className="text-[9px] font-black text-slate-500 uppercase">
+                  {saveStatus === 'saving' ? 'Synchro...' : lastSaved ? `Sauvé ${new Date(lastSaved).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}` : 'Protégé'}
+                </span>
+              </div>
+            </div>
             <h2 className="text-xl font-black text-slate-800 dark:text-white tracking-tight">Espace de Travail Clinique</h2>
           </div>
           
@@ -104,13 +116,13 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, doct
                 <p className="text-sm font-black text-slate-800 dark:text-slate-100 leading-tight">Dr. {doctorName}</p>
                 <p className="text-[10px] text-indigo-500 font-black uppercase tracking-wider">{specialty}</p>
               </div>
-              <div className="h-14 w-14 rounded-2xl bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-100/50 dark:border-indigo-500/20 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-black text-xl shadow-sm">
+              <div className="h-12 w-12 rounded-2xl bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-100 dark:border-indigo-500/20 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-black text-xl shadow-sm">
                 {doctorName?.charAt(0)}
               </div>
             </div>
           </div>
         </header>
-        <div className="p-10 animate-in fade-in slide-in-from-bottom-6 duration-700">{children}</div>
+        <div className="p-10">{children}</div>
       </main>
     </div>
   );
