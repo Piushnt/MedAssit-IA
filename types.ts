@@ -16,6 +16,7 @@ export interface HealthDocument {
   mimeType: string;
   timestamp: number;
   anonymized?: boolean;
+  analysisSummary?: string;
 }
 
 export interface Patient {
@@ -23,9 +24,15 @@ export interface Patient {
   nomAnonymise: string;
   age: number;
   antecedents: string;
+  allergies: string[];
   sexe: 'M' | 'F' | 'Autre';
   documents: HealthDocument[];
   consultations: AdviceLog[];
+  vitalSigns?: {
+    bmi?: number;
+    bp?: string;
+    hr?: number;
+  };
 }
 
 export interface Doctor {

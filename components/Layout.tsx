@@ -28,6 +28,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, doct
     { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard' },
     { id: 'scribe', icon: Mic, label: 'Scribe Ambiant' },
     { id: 'patients', icon: Users, label: 'Patients' },
+    { id: 'logs', icon: History, label: 'Historique' },
     { id: 'database', icon: Database, label: 'Base Scientifique' },
     { id: 'audit', icon: Lock, label: 'Sécurité & Audit' },
   ];

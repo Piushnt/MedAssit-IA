@@ -16,21 +16,27 @@ export const queryGemini = async (
   prompt: string,
   documents: HealthDocument[],
   isSummary: boolean = false,
-  sources: MedicalStudy[] = []
+  sources: MedicalStudy[] = [],
+  patientAllergies: string[] = []
 ): Promise<string> => {
   const apiKey = process.env.API_KEY;
-  if (!apiKey) throw new Error("API Key is missing");
+  if (!apiKey) throw new Error("API Key is missing. Ensure process.env.API_KEY is defined.");
 
-  const ai = new GoogleGenAI({ apiKey: apiKey });
+  // Correct instantiation according to guidelines
+  const ai = new GoogleGenAI({ apiKey });
   
+  const allergyContext = patientAllergies.length > 0 
+    ? `ATTENTION CRITIQUE : Le patient présente les allergies suivantes : ${patientAllergies.join(', ')}. Toute recommandation médicamenteuse doit être vérifiée par rapport à ces contre-indications.`
+    : "Aucune allergie connue renseignée.";
+
   const systemInstruction = isSummary 
-    ? "Vous êtes un assistant IA médical expert. Générez une synthèse clinique structurée (Antécédents, Clinique, Paraclinique, Synthèse). Soyez précis et concis."
-    : "Vous êtes un assistant IA médical expert. Répondez aux questions cliniques en vous basant sur les documents fournis. Si une situation est critique, commencez par '⚠️ URGENCE'.";
+    ? `Vous êtes un assistant IA médical expert. ${allergyContext} Générez une synthèse clinique structurée.`
+    : `Vous êtes un assistant IA médical expert. ${allergyContext} Répondez aux questions cliniques en vous basant sur les documents fournis. Si une situation est critique ou présente un risque allergique, commencez par '⚠️ ALERTE'.`;
 
   const parts: any[] = [{ text: systemInstruction }];
 
   documents.forEach((doc) => {
-    if (doc.mimeType.startsWith('image/')) {
+    if (doc.mimeType && doc.mimeType.startsWith('image/')) {
       parts.push({
         inlineData: { data: cleanBase64(doc.content), mimeType: doc.mimeType }
       });
@@ -57,7 +63,7 @@ export const queryGemini = async (
     return response.text || "Analyse impossible.";
   } catch (error) {
     console.error("Gemini Error:", error);
-    return "Erreur technique de diagnostic.";
+    return "Erreur technique de diagnostic. Vérifiez votre connexion API.";
   }
 };
 
@@ -65,7 +71,10 @@ export const queryGemini = async (
  * Perform a grounded medical search using Google Search
  */
 export const searchMedicalGuidelines = async (query: string): Promise<{text: string, sources: any[]}> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const apiKey = process.env.API_KEY;
+  if (!apiKey) throw new Error("API Key missing");
+  const ai = new GoogleGenAI({ apiKey });
+  
   try {
     const response = await ai.models.generateContent({
       model: "gemini-3-pro-preview",
@@ -89,7 +98,10 @@ export const searchMedicalGuidelines = async (query: string): Promise<{text: str
  * Rapid analysis of an uploaded clinical document
  */
 export const analyzeClinicalDocument = async (doc: HealthDocument): Promise<string> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const apiKey = process.env.API_KEY;
+  if (!apiKey) return "API Key missing";
+  const ai = new GoogleGenAI({ apiKey });
+  
   const parts: any[] = [
     { text: "Analysez ce document médical. Identifiez le type de document (Bio, Imagerie, CR), extrayez 3 points clés et notez toute anomalie majeure." }
   ];
@@ -112,13 +124,28 @@ export const analyzeClinicalDocument = async (doc: HealthDocument): Promise<stri
   }
 };
 
+/**
+ * Expert SOAP generator for Ambient Scribe
+ */
 export const generateSOAPNote = async (transcript: string): Promise<string> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-  const prompt = `Générer une note SOAP structurée à partir de cette consultation :\n${transcript}\n\nInclure également une section 'Diagnostics Différentiels Suggérés'.`;
-  const response = await ai.models.generateContent({
-    model: 'gemini-3-flash-preview',
-    contents: prompt,
-    config: { temperature: 0.2 }
-  });
-  return response.text || "Erreur SOAP.";
+  const apiKey = process.env.API_KEY;
+  if (!apiKey) return "API Key missing";
+  const ai = new GoogleGenAI({ apiKey });
+  
+  const systemInstruction = `Vous êtes un scribe médical expert. Transformez la transcription brute d'une consultation en une note SOAP structurée et professionnelle.`;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: `Transcription de la consultation :\n${transcript}`,
+      config: { 
+        systemInstruction,
+        temperature: 0.2,
+      }
+    });
+    return response.text || "Erreur lors de la structuration SOAP.";
+  } catch (error) {
+    console.error("SOAP Error:", error);
+    return "L'IA n'a pas pu structurer la note.";
+  }
 };

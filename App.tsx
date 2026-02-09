@@ -72,10 +72,11 @@ const App: React.FC = () => {
       )}
       {activeTab === 'database' && <DatabaseViewer specialty={doctor.specialty} />}
       {activeTab === 'audit' && <SecurityAudit />}
+      {activeTab === 'logs' && <LogViewer logs={allLogs} />}
       
       {activeTab === 'documents' && (
         <div className="space-y-10 animate-in fade-in duration-700">
-          <div className="max-w-5xl mx-auto">
+          <div className="max-w-5xl auto">
             <div className="bg-white dark:bg-slate-900 p-12 rounded-[3.5rem] border border-slate-100 dark:border-white/5 shadow-sm relative overflow-hidden">
                <div className="relative z-10">
                 <h3 className="text-2xl font-black text-slate-800 dark:text-white mb-3 tracking-tight">Mes Protocoles & Ressources</h3>
@@ -88,8 +89,6 @@ const App: React.FC = () => {
           </div>
         </div>
       )}
-      
-      {(activeTab === 'logs' || activeTab === 'audit_logs') && <LogViewer logs={allLogs} />}
     </Layout>
   );
 };
