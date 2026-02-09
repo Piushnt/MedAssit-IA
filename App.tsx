@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import Layout from './components/Layout.tsx';
 import Auth from './components/Auth.tsx';
@@ -77,7 +78,8 @@ const App: React.FC = () => {
 
   if (!doctor) {
     return <Auth onComplete={(doc) => {
-      StorageService.saveDoctor(doc);
+      // Fixed: use setCurrentDoctorId as saveDoctor does not exist in StorageService
+      StorageService.setCurrentDoctorId(doc.id);
       setDoctor(doc);
     }} />;
   }

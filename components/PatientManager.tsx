@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { UserPlus, User, Trash2, ChevronRight, ClipboardList, PlusCircle, ArrowLeft, AlertCircle, Activity, Heart, Scale, TrendingUp, Plus, Hash, Clock, ShieldCheck, Download, Calendar, Bell, Trash } from 'lucide-react';
 import { Patient, Doctor, HealthDocument, VitalEntry, Appointment } from '../types';
@@ -132,7 +133,6 @@ const VitalsChart: React.FC<{ data: VitalEntry[] }> = ({ data }) => {
   );
 };
 
-// Added missing PatientManagerProps interface
 interface PatientManagerProps {
   patients: Patient[];
   setPatients: (patients: Patient[] | ((prev: Patient[]) => Patient[])) => void;
@@ -166,7 +166,8 @@ const PatientManager: React.FC<PatientManagerProps> = ({ patients = [], setPatie
       consultations: [],
       vitalSigns: { ...newVitals },
       vitalsHistory: [{ ...newVitals }],
-      appointments: []
+      appointments: [],
+      doctorId: doctor.id // Indique le docteur qui suit le patient
     };
     setPatients([patient, ...patientList]);
     setShowAddForm(false);
@@ -242,12 +243,17 @@ const PatientManager: React.FC<PatientManagerProps> = ({ patients = [], setPatie
                     </div>
                   </div>
                 </div>
-                {selectedPatient.allergies && selectedPatient.allergies.length > 0 && (
-                   <div className="flex items-center gap-2 px-4 py-2 bg-red-50 dark:bg-red-950 text-red-600 dark:text-red-400 rounded-xl border border-red-100 dark:border-red-500/10">
-                    <AlertCircle className="w-4 h-4 animate-pulse" />
-                    <span className="text-[10px] font-black uppercase">Alerte Allergies</span>
-                   </div>
-                )}
+                <div className="flex flex-col items-end gap-2">
+                  <div className="px-4 py-2 bg-indigo-50 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 rounded-xl border border-indigo-100 dark:border-indigo-500/20">
+                    <span className="text-[10px] font-black uppercase">Suivi par : Dr. {doctor.name}</span>
+                  </div>
+                  {selectedPatient.allergies && selectedPatient.allergies.length > 0 && (
+                    <div className="flex items-center gap-2 px-4 py-2 bg-red-50 dark:bg-red-950 text-red-600 dark:text-red-400 rounded-xl border border-red-100 dark:border-red-500/10">
+                      <AlertCircle className="w-4 h-4 animate-pulse" />
+                      <span className="text-[10px] font-black uppercase">Alerte Allergies</span>
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -275,7 +281,6 @@ const PatientManager: React.FC<PatientManagerProps> = ({ patients = [], setPatie
                    </button>
                 </div>
 
-                {/* New Chronological Timeline Component */}
                 <AppointmentsTimeline appointments={selectedPatient.appointments || []} />
 
                 {showApptForm && (

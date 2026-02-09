@@ -1,3 +1,4 @@
+
 export interface MedicalStudy {
   id: string;
   titre: string;
@@ -16,13 +17,13 @@ export interface HealthDocument {
   timestamp: number;
   anonymized?: boolean;
   analysisSummary?: string;
-  pageCount?: number; // Nouveau: Nombre de pages pour PDF/Images groupées
+  pageCount?: number;
 }
 
 export interface VitalEntry {
   timestamp: number;
   bmi?: number;
-  bp?: string; // Format "120/80"
+  bp?: string;
   hr?: number;
 }
 
@@ -35,8 +36,8 @@ export interface Appointment {
 }
 
 export interface Patient {
-  id: string; // UUID interne
-  patientId: string; // Identifiant métier (ex: PAT-2024-001)
+  id: string;
+  patientId: string;
   nomAnonymise: string;
   age: number;
   antecedents: string;
@@ -46,12 +47,15 @@ export interface Patient {
   consultations: AdviceLog[];
   vitalSigns?: VitalEntry;
   vitalsHistory: VitalEntry[];
-  appointments: Appointment[]; // Nouveau: Gestion des RDV
+  appointments: Appointment[];
+  doctorId: string; // Lien avec le docteur qui suit le patient
 }
 
 export interface Doctor {
   id: string;
   name: string;
+  email: string; // Ajouté
+  password: string; // Ajouté
   specialty: string;
   licenseNumber: string;
   isVerified: boolean;

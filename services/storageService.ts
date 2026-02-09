@@ -2,7 +2,8 @@
 import { Patient, Doctor, AdviceLog, AuditEntry, MedicalStudy } from '../types';
 
 const KEYS = {
-  DOCTOR: 'med_pro_profile',
+  DOCTORS: 'med_pro_accounts', // Liste de tous les comptes
+  SESSION_ID: 'med_pro_session_id', // ID du docteur connecté
   PATIENTS: 'med_pro_patients',
   GLOBAL_DOCS: 'med_global_docs',
   AUDIT_LOGS: 'med_audit_logs',
@@ -10,20 +11,73 @@ const KEYS = {
 };
 
 export const StorageService = {
-  saveDoctor: (doctor: Doctor) => localStorage.setItem(KEYS.DOCTOR, JSON.stringify(doctor)),
+  // Gestion des comptes Docteurs
+  signup: (doctor: Doctor) => {
+    const doctors = StorageService.getAllDoctors();
+    if (doctors.find(d => d.email === doctor.email)) {
+      throw new Error("Cet email est déjà utilisé.");
+    }
+    localStorage.setItem(KEYS.DOCTORS, JSON.stringify([...doctors, doctor]));
+    StorageService.setCurrentDoctorId(doctor.id);
+    StorageService.logAudit('Création de compte Praticien', 'medium', doctor.id);
+  },
+
+  login: (name: string, password: string): Doctor | null => {
+    const doctors = StorageService.getAllDoctors();
+    const found = doctors.find(d => d.name === name && d.password === password);
+    if (found) {
+      StorageService.setCurrentDoctorId(found.id);
+      StorageService.logAudit('Connexion Praticien', 'low', found.id);
+      return found;
+    }
+    return null;
+  },
+
+  getAllDoctors: (): Doctor[] => {
+    try {
+      const d = localStorage.getItem(KEYS.DOCTORS);
+      return d ? JSON.parse(d) : [];
+    } catch (e) { return []; }
+  },
+
+  setCurrentDoctorId: (id: string) => localStorage.setItem(KEYS.SESSION_ID, id),
+  
   getDoctor: (): Doctor | null => {
     try {
-      const d = localStorage.getItem(KEYS.DOCTOR);
-      return d ? JSON.parse(d) : null;
+      const sessionId = localStorage.getItem(KEYS.SESSION_ID);
+      if (!sessionId) return null;
+      const doctors = StorageService.getAllDoctors();
+      return doctors.find(d => d.id === sessionId) || null;
     } catch (e) { return null; }
   },
   
-  savePatients: (patients: Patient[]) => localStorage.setItem(KEYS.PATIENTS, JSON.stringify(patients)),
-  getPatients: (): Patient[] => {
+  // Gestion des Patients (filtrés par Docteur)
+  savePatients: (patients: Patient[]) => {
+    const doctor = StorageService.getDoctor();
+    if (!doctor) return;
+
+    // On récupère tous les patients de tous les docteurs
+    const allStoredPatients = StorageService.getAllPatientsRaw();
+    // On filtre ceux qui n'appartiennent pas au docteur actuel
+    const otherPatients = allStoredPatients.filter(p => p.doctorId !== doctor.id);
+    // On fusionne avec les patients mis à jour du docteur actuel
+    const updatedAll = [...otherPatients, ...patients.map(p => ({ ...p, doctorId: doctor.id }))];
+    
+    localStorage.setItem(KEYS.PATIENTS, JSON.stringify(updatedAll));
+  },
+
+  getAllPatientsRaw: (): Patient[] => {
     try {
       const p = localStorage.getItem(KEYS.PATIENTS);
       return p ? JSON.parse(p) : [];
     } catch (e) { return []; }
+  },
+
+  getPatients: (): Patient[] => {
+    const doctor = StorageService.getDoctor();
+    if (!doctor) return [];
+    const all = StorageService.getAllPatientsRaw();
+    return all.filter(p => p.doctorId === doctor.id);
   },
 
   saveGlobalDocs: (docs: any[]) => localStorage.setItem(KEYS.GLOBAL_DOCS, JSON.stringify(docs)),
@@ -43,8 +97,12 @@ export const StorageService = {
   },
   
   addPatient: (patient: Patient) => {
+    const doctor = StorageService.getDoctor();
+    if (!doctor) return;
+    
     const ps = StorageService.getPatients();
-    StorageService.savePatients([patient, ...ps]);
+    const newPatient = { ...patient, doctorId: doctor.id };
+    StorageService.savePatients([newPatient, ...ps]);
     StorageService.logAudit('Création Dossier Patient', 'medium', patient.id);
   },
 
@@ -84,7 +142,7 @@ export const StorageService = {
 
   logout: () => {
     StorageService.logAudit('Déconnexion Praticien', 'low');
-    localStorage.removeItem(KEYS.DOCTOR);
+    localStorage.removeItem(KEYS.SESSION_ID);
   },
 
   clearAll: () => {
