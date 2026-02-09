@@ -1,8 +1,8 @@
 
 import React, { useState, useEffect } from 'react';
-import { Send, Bot, Loader2, Info, Sparkles, AlertTriangle, PhoneCall, BookOpen, Zap, UserCheck } from 'lucide-react';
+import { Send, Bot, Loader2, Info, Sparkles, AlertTriangle, PhoneCall, BookOpen, Zap, UserCheck, Pill, Search, ExternalLink } from 'lucide-react';
 import { HealthDocument, AdviceLog, Doctor, Patient, MedicalStudy } from '../types';
-import { queryGemini } from '../services/geminiService';
+import { queryGemini, searchMedicalGuidelines } from '../services/geminiService';
 
 interface DashboardProps {
   doctor: Doctor;
@@ -22,6 +22,10 @@ const Dashboard: React.FC<DashboardProps> = ({
   const [showEmergency, setShowEmergency] = useState(false);
   const [selectedPatientId, setSelectedPatientId] = useState<string>(patients[0]?.id || '');
   
+  const [medQuery, setMedQuery] = useState('');
+  const [isSearchingMed, setIsSearchingMed] = useState(false);
+  const [medResult, setMedResult] = useState<{text: string, sources: any[]} | null>(null);
+
   const selectedPatient = patients.find(p => p.id === selectedPatientId);
   const documents = selectedPatient ? selectedPatient.documents : patients.flatMap(p => p.documents);
   const allergies = selectedPatient?.allergies || [];
@@ -48,7 +52,6 @@ const Dashboard: React.FC<DashboardProps> = ({
 
     try {
       const sources = isExpertMode ? localStudies : [];
-      // PASS ALLERGIES TO GEMINI SERVICE
       const response = await queryGemini(promptToSend, documents, isSummary, sources, allergies);
       
       const isUrgent = response.includes("⚠️") || response.toLowerCase().includes("urgent") || response.toLowerCase().includes("alerte");
@@ -70,6 +73,20 @@ const Dashboard: React.FC<DashboardProps> = ({
     } finally {
       setIsLoading(false);
       setIsSummarizing(false);
+    }
+  };
+
+  const handleMedSearch = async () => {
+    if (!medQuery.trim()) return;
+    setIsSearchingMed(true);
+    setMedResult(null);
+    try {
+      const result = await searchMedicalGuidelines(`Informations pharmacologiques, posologie, contre-indications et interactions pour le médicament : ${medQuery}`);
+      setMedResult(result);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsSearchingMed(false);
     }
   };
 
@@ -109,11 +126,27 @@ const Dashboard: React.FC<DashboardProps> = ({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl shadow-sm border border-slate-100 dark:border-white/5 flex items-start gap-4 hover:shadow-md transition-all">
           <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-2xl">
-            <Info className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+            <pill className="w-6 h-6 text-blue-600 dark:text-blue-400" />
           </div>
-          <div>
-            <h3 className="font-bold text-slate-800 dark:text-slate-100">Documents Patient</h3>
-            <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">{documents.length} fichier(s) en contexte.</p>
+          <div className="flex-1">
+            <h3 className="font-bold text-slate-800 dark:text-slate-100">Recherche Pharmacopée</h3>
+            <div className="mt-2 flex gap-2">
+              <input 
+                type="text" 
+                placeholder="Ex: Metformine..."
+                className="flex-1 text-xs bg-slate-50 dark:bg-slate-800 p-2 rounded-xl outline-none border border-slate-100 dark:border-white/5"
+                value={medQuery}
+                onChange={e => setMedQuery(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleMedSearch()}
+              />
+              <button 
+                onClick={handleMedSearch}
+                disabled={isSearchingMed || !medQuery.trim()}
+                className="p-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 disabled:opacity-30"
+              >
+                {isSearchingMed ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+              </button>
+            </div>
           </div>
         </div>
 
@@ -131,6 +164,27 @@ const Dashboard: React.FC<DashboardProps> = ({
           </div>
         </button>
       </div>
+
+      {medResult && (
+        <div className="bg-indigo-50 dark:bg-indigo-900/20 p-6 rounded-3xl border border-indigo-100 dark:border-indigo-500/30 animate-in slide-in-from-top-4">
+           <div className="flex items-center gap-3 mb-4">
+             <Bot className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+             <h4 className="text-sm font-black text-indigo-900 dark:text-indigo-100 uppercase tracking-widest">Informations Médicament</h4>
+           </div>
+           <div className="text-sm text-slate-700 dark:text-slate-200 leading-relaxed whitespace-pre-wrap mb-4">
+             {medResult.text}
+           </div>
+           <div className="flex flex-wrap gap-2">
+             {medResult.sources.map((s, i) => (
+               s.web && (
+                 <a key={i} href={s.web.uri} target="_blank" rel="noopener" className="flex items-center gap-1 text-[10px] font-bold text-indigo-500 hover:underline">
+                   <ExternalLink className="w-3 h-3" /> {s.web.title}
+                 </a>
+               )
+             ))}
+           </div>
+        </div>
+      )}
 
       <div className={`flex items-center justify-between p-5 rounded-3xl border transition-all duration-300 ${
         isExpertMode 

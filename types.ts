@@ -19,6 +19,13 @@ export interface HealthDocument {
   analysisSummary?: string;
 }
 
+export interface VitalEntry {
+  timestamp: number;
+  bmi?: number;
+  bp?: string; // Format "120/80"
+  hr?: number;
+}
+
 export interface Patient {
   id: string;
   nomAnonymise: string;
@@ -28,11 +35,8 @@ export interface Patient {
   sexe: 'M' | 'F' | 'Autre';
   documents: HealthDocument[];
   consultations: AdviceLog[];
-  vitalSigns?: {
-    bmi?: number;
-    bp?: string;
-    hr?: number;
-  };
+  vitalSigns?: VitalEntry;
+  vitalsHistory: VitalEntry[];
 }
 
 export interface Doctor {

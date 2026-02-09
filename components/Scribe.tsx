@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Mic, MicOff, Loader2, FileText, Save, Sparkles, Activity, ShieldCheck, Copy, Check, History, RotateCcw } from 'lucide-react';
+import { Mic, MicOff, Loader2, FileText, Save, Sparkles, Activity, ShieldCheck, Copy, Check, History, RotateCcw, Download } from 'lucide-react';
 import { generateSOAPNote } from '../services/geminiService';
 import { StorageService } from '../services/storageService';
 
@@ -87,6 +87,18 @@ const Scribe: React.FC = () => {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const exportSOAP = () => {
+    const date = new Date().toLocaleDateString('fr-FR').replace(/\//g, '-');
+    const content = `COMPTE-RENDU DE CONSULTATION (SOAP)\nDate: ${new Date().toLocaleString()}\n\n${summary}\n\n--- Document généré par MedAssist Pro ---`;
+    const blob = new Blob([content], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `SOAP_Note_${date}.txt`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in duration-500">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-2">
@@ -106,7 +118,6 @@ const Scribe: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* Contrôles et Status */}
         <div className="lg:col-span-4 space-y-6">
           <div className="bg-white dark:bg-slate-900 p-8 rounded-[3rem] border border-slate-100 dark:border-white/5 shadow-sm text-center relative overflow-hidden group">
             <div className={`absolute top-0 left-0 w-full h-1 transition-all duration-1000 ${isRecording ? 'bg-red-500' : 'bg-transparent'}`}></div>
@@ -177,10 +188,8 @@ const Scribe: React.FC = () => {
           </div>
         </div>
 
-        {/* Workspace de Transcription & SOAP */}
         <div className="lg:col-span-8 space-y-6">
           <div className="bg-white dark:bg-slate-900 rounded-[3rem] border border-slate-100 dark:border-white/5 shadow-sm overflow-hidden flex flex-col h-[700px]">
-            {/* Header Onglets */}
             <div className="flex border-b border-slate-50 dark:border-white/5">
               <div className="flex-1 px-8 py-5 border-r border-slate-50 dark:border-white/5 bg-slate-50/50 dark:bg-slate-800/30">
                 <div className="flex items-center justify-between">
@@ -198,7 +207,6 @@ const Scribe: React.FC = () => {
             </div>
 
             <div ref={scrollRef} className="flex-1 overflow-y-auto p-10 space-y-12 bg-white dark:bg-slate-900">
-              {/* Flux de texte */}
               <div className="space-y-6">
                 <p className={`text-xl font-medium leading-relaxed ${isRecording ? 'text-slate-800 dark:text-white' : 'text-slate-400 dark:text-slate-500 italic'}`}>
                   {transcript || (isRecording ? "Capture de l'audio..." : "La transcription apparaîtra ici une fois l'enregistrement lancé.")}
@@ -210,7 +218,6 @@ const Scribe: React.FC = () => {
                 )}
               </div>
 
-              {/* Note SOAP */}
               {summary && (
                 <div className="animate-in slide-in-from-bottom-8 duration-700 space-y-6 pt-10 border-t border-slate-50 dark:border-white/5">
                   <div className="flex items-center justify-between">
@@ -220,13 +227,22 @@ const Scribe: React.FC = () => {
                       </div>
                       <h4 className="font-black text-slate-800 dark:text-white tracking-tight">Note SOAP Structurée</h4>
                     </div>
-                    <button 
-                      onClick={copyToClipboard}
-                      className="flex items-center gap-2 px-6 py-3 bg-slate-100 dark:bg-slate-800 hover:bg-indigo-600 hover:text-white dark:hover:bg-indigo-600 rounded-2xl transition-all font-bold text-sm shadow-sm group"
-                    >
-                      {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                      {copied ? "Copié !" : "Copier Rapport"}
-                    </button>
+                    <div className="flex gap-2">
+                      <button 
+                        onClick={copyToClipboard}
+                        className="flex items-center gap-2 px-5 py-3 bg-slate-100 dark:bg-slate-800 hover:bg-indigo-600 hover:text-white rounded-2xl transition-all font-bold text-sm shadow-sm"
+                      >
+                        {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                        {copied ? "Copié" : "Copier"}
+                      </button>
+                      <button 
+                        onClick={exportSOAP}
+                        className="flex items-center gap-2 px-5 py-3 bg-slate-900 text-white rounded-2xl transition-all font-bold text-sm shadow-sm hover:bg-slate-800"
+                      >
+                        <Download className="w-4 h-4" />
+                        Exporter .txt
+                      </button>
+                    </div>
                   </div>
                   
                   <div className="bg-slate-50 dark:bg-slate-800/40 p-8 rounded-[2.5rem] border border-slate-100 dark:border-white/5 text-slate-700 dark:text-slate-200 font-medium whitespace-pre-wrap leading-[1.8] text-lg shadow-inner">
@@ -236,7 +252,6 @@ const Scribe: React.FC = () => {
               )}
             </div>
             
-            {/* Footer Status */}
             <div className="px-8 py-4 bg-slate-50/50 dark:bg-slate-800/30 border-t border-slate-50 dark:border-white/5 flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-slate-400">
                <div className="flex items-center gap-4">
                  <span>Moteur : Gemini 3 Flash</span>
