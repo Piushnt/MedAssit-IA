@@ -1,48 +1,71 @@
-🚀 CONFIGURATION CRITIQUE GEMINI API - MedAssist Pro
+🚀 GUIDE D'INTÉGRATION GEMINI API - MedAssist Pro
 ==================================================
 
-Ce guide contient les instructions impératives pour activer les fonctionnalités IA. 
-L'application utilise le SDK officiel `@google/genai`.
+Ce guide détaille les étapes pour configurer vos clés d'accès en environnement de développement (Local) et en production (Professionnel).
 
 ---
 
-1. ACCÈS À LA CLÉ API
----------------------
-• Obtenez votre clé sur : https://aistudio.google.com/
-• Modèles requis : 'gemini-3-pro-preview' (Expertise) et 'gemini-3-flash-preview' (Scribe).
-
-2. CONFIGURATION DE L'ENVIRONNEMENT (Localhost)
------------------------------------------------
-L'application accède à la clé via `process.env.API_KEY`. 
-Dans un environnement de développement moderne (Vite/Webpack) :
-
-A. Créez un fichier `.env` à la racine :
-   API_KEY=votre_cle_ici
-
-B. Si vous utilisez Vite, assurez-vous que votre configuration injecte bien `process.env`. 
-   Le code source de MedAssist Pro appelle directement `new GoogleGenAI({ apiKey: process.env.API_KEY })`.
-
-C. Pour les assistants IA d'IDE (Cursor/Copilot) :
-   Transmettez cette instruction : "Utilise exclusivement process.env.API_KEY pour initialiser GoogleGenAI. Ne crée jamais de champ de saisie UI pour la clé API."
-
-3. DÉPLOIEMENT (Production)
----------------------------
-• Ne poussez jamais le fichier `.env` sur Git.
-• Sur votre hébergeur (Vercel, Netlify, Cloudflare) : 
-  Allez dans "Environment Variables" et ajoutez la clé `API_KEY`.
-• L'application détectera automatiquement la variable au runtime.
-
-4. PARAMÈTRES DU MODÈLE
------------------------
-Pour maintenir la qualité médicale, utilisez toujours :
-- temperature: 0.1 pour les synthèses (précision).
-- temperature: 0.7 pour les conseils patients (empathie).
-- thinkingConfig: { thinkingBudget: 32768 } pour les diagnostics complexes.
-
-5. SÉCURITÉ DES DONNÉES DE SANTÉ
+1. OBTENTION DE LA CLÉ (API KEY)
 --------------------------------
-• Avant tout envoi à l'API, les données passent par `utils/anonymizer.ts`. 
-• Ne jamais contourner cette étape pour garantir le secret médical.
+1. Rendez-vous sur Google AI Studio (https://aistudio.google.com/).
+2. Connectez-vous avec votre compte professionnel.
+3. Cliquez sur "Get API Key" puis "Create API Key in new project".
+4. Copiez précieusement cette clé. Elle est confidentielle.
+
+2. CONFIGURATION EN LOCAL (DÉVELOPPEMENT)
+-----------------------------------------
+Le code de MedAssist-IA Pro utilise exclusivement `process.env.API_KEY`.
+
+Étapes pour votre IDE (VS Code, Cursor, etc.) :
+1. Créez un fichier nommé `.env` à la racine de votre projet (si vous utilisez Vite/Webpack).
+2. Ajoutez la ligne suivante :
+   VITE_API_KEY=votre_cle_ici
+   (Note: Si vous utilisez un environnement Node pur, utilisez API_KEY=votre_cle_ici)
+
+3. Redémarrez votre serveur de développement :
+   `npm run dev` ou `vite`
+
+Vérification :
+Dans la console de votre navigateur, tapez : `console.log(import.meta.env.VITE_API_KEY)` pour vérifier que la clé est bien chargée.
+
+3. DÉPLOIEMENT PROFESSIONNEL (PRODUCTION)
+-----------------------------------------
+NE JAMAIS VERSIONNER VOTRE CLÉ API (ne pas l'ajouter sur GitHub).
+
+Étapes de déploiement (Vercel, Netlify, Cloudflare, AWS) :
+1. Accédez au tableau de bord de votre hébergeur.
+2. Allez dans "Settings" ou "Environment Variables".
+3. Ajoutez une nouvelle variable :
+   - Key : API_KEY
+   - Value : [Votre Clé API réelle]
+4. Déployez. L'infrastructure injectera automatiquement la clé lors de la compilation.
+
+4. RÈGLES DE DÉVELOPPEMENT (SDK @google/genai)
+----------------------------------------------
+Pour toute modification du code, respectez scrupuleusement ces standards :
+
+Initialisation :
+   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+
+Appel Modèle (Génération de texte) :
+   const response = await ai.models.generateContent({
+     model: 'gemini-3-flash-preview',
+     contents: 'Votre prompt ici',
+   });
+
+Appel Modèle (Recherche Grounding - Pro) :
+   // Utiliser gemini-3-pro-preview pour les recherches web
+   const response = await ai.models.generateContent({
+     model: 'gemini-3-pro-preview',
+     contents: prompt,
+     config: { tools: [{ googleSearch: {} }] }
+   });
+
+5. RÉSOLUTION DES PROBLÈMES (TROUBLESHOOTING)
+---------------------------------------------
+• Page noire au chargement : Souvent dû à une erreur de syntaxe dans `.env` ou une clé invalide. Vérifiez la console (F12).
+• Erreur 403 (Forbidden) : Votre clé n'a pas les droits pour le modèle demandé (ex: Gemini 3 nécessite parfois d'être en mode "Pay-as-you-go").
+• Sécurité Patient : Le code MedAssist anonymise les données via `utils/anonymizer.ts` avant l'envoi. Ne désactivez jamais ce module.
 
 ---
-Note technique : Si l'erreur "API_KEY not found" apparaît, vérifiez que le processus de build remplace bien `process.env.API_KEY` par sa valeur réelle.
+Expertise Senior : Privilégiez toujours l'usage des variables d'environnement système pour garantir l'étanchéité des données de santé.

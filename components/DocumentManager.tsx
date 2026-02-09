@@ -1,6 +1,6 @@
 
 import React, { useRef, useState, useMemo } from 'react';
-import { Upload, FileText, Trash2, ShieldCheck, Search, Loader2, Zap, AlertCircle, Filter, ImageIcon, Eye, Layers } from 'lucide-react';
+import { Upload, FileText, Trash2, ShieldCheck, Search, Loader2, Zap, AlertCircle, Filter, ImageIcon, Eye } from 'lucide-react';
 import { HealthDocument } from '../types';
 import { fileToBase64, anonymizeText } from '../utils/anonymizer';
 import { analyzeClinicalDocument } from '../services/geminiService';
@@ -31,8 +31,6 @@ const DocumentManager: React.FC<DocumentManagerProps> = ({ documents, setDocumen
       const base64 = await fileToBase64(file);
       
       let content = base64;
-      let pageCount = 1;
-
       if (file.type === 'text/plain') {
          const reader = new FileReader();
          const text = await new Promise<string>((resolve) => {
@@ -40,9 +38,6 @@ const DocumentManager: React.FC<DocumentManagerProps> = ({ documents, setDocumen
             reader.readAsText(file);
          });
          content = anonymizeText(text);
-      } else if (file.type === 'application/pdf') {
-        // Simulation du nombre de pages pour les PDF (dans une vraie app, on utiliserait pdf.js)
-        pageCount = Math.floor(Math.random() * 5) + 1;
       }
 
       const doc: HealthDocument = {
@@ -52,8 +47,7 @@ const DocumentManager: React.FC<DocumentManagerProps> = ({ documents, setDocumen
         content: content,
         mimeType: file.type,
         timestamp: Date.now(),
-        anonymized: true,
-        pageCount: pageCount
+        anonymized: true
       };
 
       newDocs.push(doc);
@@ -138,7 +132,7 @@ const DocumentManager: React.FC<DocumentManagerProps> = ({ documents, setDocumen
         </div>
         <div className="text-center space-y-1">
           <h3 className="text-2xl font-black text-slate-800 dark:text-white">Déposer vos fichiers cliniques</h3>
-          <p className="text-slate-500 dark:text-slate-400 font-medium tracking-tight">Supporte JPG, PNG, PDF multi-pages & Text. Chiffrement AES-256 actif.</p>
+          <p className="text-slate-500 dark:text-slate-400 font-medium tracking-tight">Supporte JPG, PNG, PDF & Text. Chiffrement AES-256 actif.</p>
         </div>
       </div>
 
@@ -155,15 +149,17 @@ const DocumentManager: React.FC<DocumentManagerProps> = ({ documents, setDocumen
             <div className="p-7 flex-1 flex flex-col">
               <div className="flex items-start justify-between mb-6">
                 <div className={`p-4 rounded-2xl shadow-inner ${doc.mimeType.startsWith('image/') ? 'bg-orange-50 dark:bg-orange-900/20 text-orange-600' : 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600'}`}>
-                  {doc.mimeType.startsWith('image/') ? <ImageIcon className="w-7 h-7" /> : doc.mimeType === 'application/pdf' ? <Layers className="w-7 h-7" /> : <FileText className="w-7 h-7" />}
+                  {doc.mimeType.startsWith('image/') ? <ImageIcon className="w-7 h-7" /> : <FileText className="w-7 h-7" />}
                 </div>
                 <div className="flex gap-2">
-                  <button 
-                    onClick={(e) => { e.stopPropagation(); setPreviewId(doc.id); }}
-                    className="p-3 text-slate-300 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-xl transition-all opacity-0 group-hover:opacity-100"
-                  >
-                    <Eye className="w-5 h-5" />
-                  </button>
+                  {doc.mimeType.startsWith('image/') && (
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); setPreviewId(doc.id); }}
+                      className="p-3 text-slate-300 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-xl transition-all opacity-0 group-hover:opacity-100"
+                    >
+                      <Eye className="w-5 h-5" />
+                    </button>
+                  )}
                   <button 
                     onClick={(e) => { e.stopPropagation(); removeDoc(doc.id); }}
                     className="p-3 text-slate-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all opacity-0 group-hover:opacity-100"
@@ -183,26 +179,11 @@ const DocumentManager: React.FC<DocumentManagerProps> = ({ documents, setDocumen
                 </div>
               )}
 
-              {doc.mimeType === 'application/pdf' && (
-                <div className="w-full h-32 mb-6 rounded-2xl overflow-hidden bg-slate-100 dark:bg-slate-800 border border-slate-50 dark:border-white/5 flex items-center justify-center bg-slate-100 dark:bg-slate-800">
-                  <div className="flex flex-col items-center opacity-40 group-hover:opacity-100 transition-opacity">
-                    <Layers className="w-10 h-10 text-indigo-500 mb-2" />
-                    <span className="text-[10px] font-black uppercase tracking-widest text-indigo-600">{doc.pageCount || 1} Pages</span>
-                  </div>
-                </div>
-              )}
-
               <h4 className="font-black text-slate-800 dark:text-white truncate mb-1 text-lg leading-tight" title={doc.name}>{doc.name}</h4>
               <div className="flex items-center gap-2 mb-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">
                 <span>{new Date(doc.timestamp).toLocaleDateString()}</span>
                 <span className="w-1 h-1 bg-slate-200 rounded-full"></span>
                 <span>{Math.round(doc.content.length / 1024)} KB</span>
-                {doc.pageCount && doc.pageCount > 1 && (
-                  <>
-                    <span className="w-1 h-1 bg-slate-200 rounded-full"></span>
-                    <span className="text-indigo-500">{doc.pageCount} PAGES</span>
-                  </>
-                )}
               </div>
 
               {doc.analysisSummary ? (
@@ -236,43 +217,13 @@ const DocumentManager: React.FC<DocumentManagerProps> = ({ documents, setDocumen
           onClick={() => setPreviewId(null)}
         >
           <div className="max-w-4xl max-h-full relative animate-in zoom-in-95 duration-300">
-            {selectedPreview.mimeType.startsWith('image/') ? (
-              <img 
-                src={`data:${selectedPreview.mimeType};base64,${selectedPreview.content}`} 
-                className="max-w-full max-h-[80vh] rounded-[2rem] shadow-2xl border border-white/10"
-                alt="Preview" 
-              />
-            ) : (
-              <div className="w-[600px] h-[80vh] bg-white dark:bg-slate-900 rounded-[2rem] shadow-2xl border border-white/10 p-12 flex flex-col">
-                <div className="flex items-center justify-between mb-8">
-                  <div className="flex items-center gap-4">
-                    <div className="p-3 bg-indigo-50 dark:bg-indigo-900/30 rounded-xl">
-                      <FileText className="w-6 h-6 text-indigo-500" />
-                    </div>
-                    <div>
-                      <h5 className="text-xl font-black text-slate-800 dark:text-white leading-tight">{selectedPreview.name}</h5>
-                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{selectedPreview.mimeType}</span>
-                    </div>
-                  </div>
-                  {selectedPreview.pageCount && selectedPreview.pageCount > 1 && (
-                    <div className="px-4 py-2 bg-slate-100 dark:bg-slate-800 rounded-xl text-[10px] font-black text-slate-500">
-                      1 / {selectedPreview.pageCount} PAGES
-                    </div>
-                  )}
-                </div>
-                <div className="flex-1 overflow-y-auto custom-scrollbar pr-4 text-slate-700 dark:text-slate-300 font-medium leading-relaxed whitespace-pre-wrap">
-                  {selectedPreview.content.length > 5000 ? selectedPreview.content.substring(0, 5000) + "..." : selectedPreview.content}
-                  {selectedPreview.mimeType === 'application/pdf' && (
-                    <div className="mt-8 p-12 bg-slate-50 dark:bg-slate-800/50 rounded-2xl text-center border-2 border-dashed border-slate-200 dark:border-white/5">
-                      <Layers className="w-12 h-12 text-slate-200 mx-auto mb-4" />
-                      <p className="text-sm italic text-slate-400">Aperçu du contenu textuel extrait par OCR.</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
+            <img 
+              src={`data:${selectedPreview.mimeType};base64,${selectedPreview.content}`} 
+              className="max-w-full max-h-[80vh] rounded-[2rem] shadow-2xl border border-white/10"
+              alt="Preview" 
+            />
             <div className="mt-8 bg-white dark:bg-slate-900 p-8 rounded-[2rem] border border-white/10">
-              <h5 className="text-xl font-black text-slate-800 dark:text-white mb-2">Analyse IA</h5>
+              <h5 className="text-xl font-black text-slate-800 dark:text-white mb-2">{selectedPreview.name}</h5>
               <p className="text-slate-400 font-medium text-sm">{selectedPreview.analysisSummary || "Pas d'analyse disponible pour cet aperçu."}</p>
             </div>
             <button 
