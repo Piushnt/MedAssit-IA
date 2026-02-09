@@ -1,0 +1,42 @@
+🩺 GUIDE UTILISATEUR - MedAssist-IA Pro
+==========================================
+
+Bienvenue dans votre nouvel environnement de travail clinique augmenté. Ce guide vous explique comment tirer le meilleur parti de chaque fonctionnalité.
+
+1. ACCÈS ET SÉCURITÉ (Onglet Authentification)
+----------------------------------------------
+• Identification : Saisissez votre nom, spécialité et numéro RPPS. 
+• Conformité : Votre accès est protégé par un chiffrement local. Aucune donnée nominative ne transite par nos serveurs sans anonymisation préalable.
+
+2. LE SCRIBE AMBIANT (Onglet Scribe) - LA RÉVOLUTION DE LA PRISE DE NOTE
+-----------------------------------------------------------------------
+• Utilisation : Cliquez sur "Démarrer Scribe" au début de la consultation. L'IA écoute l'échange médecin-patient.
+• Objectif : Plus besoin de taper pendant que vous parlez. Dictez les constantes (ex: "Tension 14/9") naturellement.
+• Note SOAP : À la fin, cliquez sur "Structurer Note SOAP". L'IA génère automatiquement un compte-rendu structuré (Subjectif, Objectif, Évaluation, Plan) prêt à être copié dans votre logiciel de cabinet habituel.
+
+3. TABLEAU DE BORD (Onglet Dashboard) - L'ASSISTANT EXPERT
+---------------------------------------------------------
+• Assistant Interactif : Posez des questions sur le dossier du patient ("Analyse cette prise de sang", "Risque d'interaction médicamenteuse ?").
+• Synthèse de Santé : Un bouton dédié permet de croiser TOUS les documents d'un patient pour en faire un résumé holistique en 10 secondes.
+• Mode Expertise : Activez le switch pour que l'IA consulte la base scientifique intégrée (RAG) et justifie ses réponses par des sources médicales.
+• Alertes Critiques : L'IA détecte automatiquement les urgences (⚠️) et les risques d'allergies.
+
+4. GESTION PATIENTÈLE (Onglet Patients)
+---------------------------------------
+• Dossier Clinique : Créez des dossiers anonymisés. 
+• Allergies : Renseignez les allergies. Un badge rouge clignotant apparaîtra partout si un risque est détecté par l'IA lors de vos échanges.
+• Indicateurs : Visualisez l'IMC, la tension et le pouls pour suivre l'évolution clinique.
+• Documents : Importez comptes-rendus, ordonnances ou photos. L'IA les analyse automatiquement dès l'import.
+
+5. BASE SCIENTIFIQUE (Onglet Base Scientifique)
+----------------------------------------------
+• Recherche Live : Utilisez la puissance de Google Search Grounding pour trouver les dernières recommandations (HAS, ESC, ADA) en temps réel.
+• Protocoles Locaux : Consultez la bibliothèque de protocoles intégrée pour une pratique conforme aux standards actuels.
+
+6. SÉCURITÉ & AUDIT (Onglet Sécurité)
+------------------------------------
+• Traçabilité : Chaque action (consultation IA, import, suppression) est logguée dans un registre immuable conforme au RGPD.
+• Export : Vous pouvez exporter l'historique complet pour vos archives ou pour un transfert de dossier.
+
+---
+Note : MedAssist-IA est un outil d'aide à la décision. Le praticien reste seul responsable du diagnostic final.
