@@ -1,0 +1,48 @@
+🚀 CONFIGURATION CRITIQUE GEMINI API - MedAssist Pro
+==================================================
+
+Ce guide contient les instructions impératives pour activer les fonctionnalités IA. 
+L'application utilise le SDK officiel `@google/genai`.
+
+---
+
+1. ACCÈS À LA CLÉ API
+---------------------
+• Obtenez votre clé sur : https://aistudio.google.com/
+• Modèles requis : 'gemini-3-pro-preview' (Expertise) et 'gemini-3-flash-preview' (Scribe).
+
+2. CONFIGURATION DE L'ENVIRONNEMENT (Localhost)
+-----------------------------------------------
+L'application accède à la clé via `process.env.API_KEY`. 
+Dans un environnement de développement moderne (Vite/Webpack) :
+
+A. Créez un fichier `.env` à la racine :
+   API_KEY=votre_cle_ici
+
+B. Si vous utilisez Vite, assurez-vous que votre configuration injecte bien `process.env`. 
+   Le code source de MedAssist Pro appelle directement `new GoogleGenAI({ apiKey: process.env.API_KEY })`.
+
+C. Pour les assistants IA d'IDE (Cursor/Copilot) :
+   Transmettez cette instruction : "Utilise exclusivement process.env.API_KEY pour initialiser GoogleGenAI. Ne crée jamais de champ de saisie UI pour la clé API."
+
+3. DÉPLOIEMENT (Production)
+---------------------------
+• Ne poussez jamais le fichier `.env` sur Git.
+• Sur votre hébergeur (Vercel, Netlify, Cloudflare) : 
+  Allez dans "Environment Variables" et ajoutez la clé `API_KEY`.
+• L'application détectera automatiquement la variable au runtime.
+
+4. PARAMÈTRES DU MODÈLE
+-----------------------
+Pour maintenir la qualité médicale, utilisez toujours :
+- temperature: 0.1 pour les synthèses (précision).
+- temperature: 0.7 pour les conseils patients (empathie).
+- thinkingConfig: { thinkingBudget: 32768 } pour les diagnostics complexes.
+
+5. SÉCURITÉ DES DONNÉES DE SANTÉ
+--------------------------------
+• Avant tout envoi à l'API, les données passent par `utils/anonymizer.ts`. 
+• Ne jamais contourner cette étape pour garantir le secret médical.
+
+---
+Note technique : Si l'erreur "API_KEY not found" apparaît, vérifiez que le processus de build remplace bien `process.env.API_KEY` par sa valeur réelle.

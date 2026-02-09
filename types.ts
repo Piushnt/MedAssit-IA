@@ -17,6 +17,7 @@ export interface HealthDocument {
   timestamp: number;
   anonymized?: boolean;
   analysisSummary?: string;
+  pageCount?: number;
 }
 
 export interface VitalEntry {
@@ -26,8 +27,17 @@ export interface VitalEntry {
   hr?: number;
 }
 
-export interface Patient {
+export interface Appointment {
   id: string;
+  date: string;
+  time: string;
+  reason: string;
+  status: 'scheduled' | 'reminded' | 'completed' | 'cancelled';
+}
+
+export interface Patient {
+  id: string; // UUID interne
+  patientId: string; // Identifiant métier (ex: PAT-2024-001)
   nomAnonymise: string;
   age: number;
   antecedents: string;
@@ -37,6 +47,7 @@ export interface Patient {
   consultations: AdviceLog[];
   vitalSigns?: VitalEntry;
   vitalsHistory: VitalEntry[];
+  appointments: Appointment[];
 }
 
 export interface Doctor {

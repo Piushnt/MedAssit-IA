@@ -1,8 +1,9 @@
 
-import React, { useState, useEffect } from 'react';
-import { Send, Bot, Loader2, Info, Sparkles, AlertTriangle, PhoneCall, BookOpen, Zap, UserCheck, Pill, Search, ExternalLink } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Send, Bot, Loader2, Info, Sparkles, AlertTriangle, PhoneCall, BookOpen, Zap, UserCheck, Pill, Search, ExternalLink, Hash, ChevronRight, Bookmark, ShieldCheck } from 'lucide-react';
 import { HealthDocument, AdviceLog, Doctor, Patient, MedicalStudy } from '../types';
 import { queryGemini, searchMedicalGuidelines } from '../services/geminiService';
+import { generateUUID } from '../utils/uuid';
 
 interface DashboardProps {
   doctor: Doctor;
@@ -26,8 +27,8 @@ const Dashboard: React.FC<DashboardProps> = ({
   const [isSearchingMed, setIsSearchingMed] = useState(false);
   const [medResult, setMedResult] = useState<{text: string, sources: any[]} | null>(null);
 
-  const selectedPatient = patients.find(p => p.id === selectedPatientId);
-  const documents = selectedPatient ? selectedPatient.documents : patients.flatMap(p => p.documents);
+  const selectedPatient = useMemo(() => patients.find(p => p.id === selectedPatientId), [patients, selectedPatientId]);
+  const documents = selectedPatient ? selectedPatient.documents : patients.flatMap(p => p.documents || []);
   const allergies = selectedPatient?.allergies || [];
   
   const [isExpertMode, setIsExpertMode] = useState(false);
@@ -45,7 +46,7 @@ const Dashboard: React.FC<DashboardProps> = ({
     if (!promptToSend.trim()) return;
 
     if (!isSummary) setQuery('');
-    setChatHistory(prev => [...prev, { role: 'user', text: isSummary ? "Générer ma synthèse de santé" : promptToSend }]);
+    setChatHistory(prev => [...prev, { role: 'user', text: isSummary ? "Génération d'une synthèse clinique transversale..." : promptToSend }]);
     
     if (isSummary) setIsSummarizing(true);
     else setIsLoading(true);
@@ -61,7 +62,7 @@ const Dashboard: React.FC<DashboardProps> = ({
 
       if (selectedPatientId) {
         addLog(selectedPatientId, {
-          id: crypto.randomUUID(),
+          id: generateUUID(),
           timestamp: Date.now(),
           query: promptToSend,
           response: response,
@@ -69,7 +70,7 @@ const Dashboard: React.FC<DashboardProps> = ({
         });
       }
     } catch (err) {
-      setChatHistory(prev => [...prev, { role: 'bot', text: "Erreur lors de l'analyse IA. Vérifiez votre configuration API Gemini." }]);
+      setChatHistory(prev => [...prev, { role: 'bot', text: "Erreur lors de l'analyse IA. Vérifiez votre configuration de clé API Gemini." }]);
     } finally {
       setIsLoading(false);
       setIsSummarizing(false);
@@ -81,7 +82,7 @@ const Dashboard: React.FC<DashboardProps> = ({
     setIsSearchingMed(true);
     setMedResult(null);
     try {
-      const result = await searchMedicalGuidelines(`Informations pharmacologiques, posologie, contre-indications et interactions pour le médicament : ${medQuery}`);
+      const result = await searchMedicalGuidelines(`Informations détaillées sur le médicament : ${medQuery}. Inclure la classe thérapeutique, les indications principales, les posologies usuelles, et les contre-indications majeures.`);
       setMedResult(result);
     } catch (err) {
       console.error(err);
@@ -91,170 +92,206 @@ const Dashboard: React.FC<DashboardProps> = ({
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      <div className="flex flex-col md:flex-row gap-4">
-        <div className="flex-1 flex items-center gap-4 p-4 bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-white/5">
-          <div className="bg-indigo-50 dark:bg-indigo-900/30 p-2 rounded-xl text-indigo-600 dark:text-indigo-400">
-            <UserCheck className="w-5 h-5" />
+    <div className="max-w-4xl mx-auto space-y-10 animate-in fade-in duration-700">
+      <div className="flex flex-col md:flex-row gap-6">
+        <div className="flex-1 flex items-center gap-5 p-5 bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-100 dark:border-white/5 shadow-sm">
+          <div className="bg-indigo-50 dark:bg-indigo-900/30 p-3 rounded-2xl text-indigo-600 dark:text-indigo-400 shadow-inner">
+            <UserCheck className="w-6 h-6" />
           </div>
           <div className="flex-1">
-            <label className="text-[10px] font-black uppercase text-slate-400 block mb-1">Dossier Actif</label>
+            <label className="text-[10px] font-black uppercase text-slate-400 block mb-1 tracking-widest">Dossier Patient Actif</label>
             <select 
               value={selectedPatientId} 
               onChange={(e) => setSelectedPatientId(e.target.value)}
-              className="bg-transparent font-bold text-slate-800 dark:text-white outline-none w-full"
+              className="bg-transparent font-black text-slate-800 dark:text-white outline-none w-full cursor-pointer text-lg leading-tight"
             >
-              <option value="">Sélectionner un patient...</option>
+              <option value="">Sélectionner un dossier...</option>
               {patients.map(p => (
-                <option key={p.id} value={p.id}>{p.nomAnonymise} ({p.age} ans)</option>
+                <option key={p.id} value={p.id}>
+                  [{p.patientId}] {p.nomAnonymise}
+                </option>
               ))}
             </select>
           </div>
         </div>
         
         {allergies.length > 0 && (
-          <div className="px-6 py-4 bg-red-50 dark:bg-red-950/40 rounded-3xl border border-red-100 dark:border-red-500/10 flex items-center gap-3">
-            <AlertTriangle className="w-5 h-5 text-red-500 animate-pulse" />
+          <div className="px-7 py-5 bg-red-50 dark:bg-red-950/40 rounded-[2rem] border border-red-100 dark:border-red-500/10 flex items-center gap-4 shadow-sm">
+            <AlertTriangle className="w-6 h-6 text-red-500 animate-pulse" />
             <div className="flex flex-col">
-              <span className="text-[9px] font-black text-red-400 uppercase tracking-widest leading-none">Allergies Patient</span>
-              <span className="text-xs font-bold text-red-600 dark:text-red-300 truncate max-w-[150px]">{allergies.join(', ')}</span>
+              <span className="text-[9px] font-black text-red-400 uppercase tracking-widest leading-none mb-1">Attention Allergies</span>
+              <span className="text-sm font-black text-red-600 dark:text-red-300 truncate max-w-[200px]">{allergies.join(', ')}</span>
             </div>
           </div>
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl shadow-sm border border-slate-100 dark:border-white/5 flex items-start gap-4 hover:shadow-md transition-all">
-          <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-2xl">
-            <pill className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-white/5 flex flex-col hover:shadow-xl transition-all group">
+          <div className="flex items-center gap-4 mb-6">
+            <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-2xl text-blue-600 dark:text-blue-400 shadow-inner group-hover:scale-110 transition-transform">
+              <Pill className="w-7 h-7" />
+            </div>
+            <h3 className="font-black text-slate-800 dark:text-slate-100 text-lg tracking-tight uppercase tracking-widest text-xs">Recherche Pharmacopée</h3>
           </div>
-          <div className="flex-1">
-            <h3 className="font-bold text-slate-800 dark:text-slate-100">Recherche Pharmacopée</h3>
-            <div className="mt-2 flex gap-2">
+          <div className="flex gap-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
               <input 
                 type="text" 
-                placeholder="Ex: Metformine..."
-                className="flex-1 text-xs bg-slate-50 dark:bg-slate-800 p-2 rounded-xl outline-none border border-slate-100 dark:border-white/5"
+                placeholder="Nom du médicament..."
+                className="w-full pl-11 pr-5 py-4 text-sm bg-slate-50 dark:bg-slate-800 rounded-2xl outline-none border border-transparent focus:border-indigo-500/30 transition-all font-bold"
                 value={medQuery}
                 onChange={e => setMedQuery(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && handleMedSearch()}
               />
-              <button 
-                onClick={handleMedSearch}
-                disabled={isSearchingMed || !medQuery.trim()}
-                className="p-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 disabled:opacity-30"
-              >
-                {isSearchingMed ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
-              </button>
             </div>
+            <button 
+              onClick={handleMedSearch}
+              disabled={isSearchingMed || !medQuery.trim()}
+              className="px-6 bg-indigo-600 text-white rounded-2xl hover:bg-indigo-700 disabled:opacity-30 transition-all shadow-lg shadow-indigo-600/20 active:scale-95"
+            >
+              {isSearchingMed ? <Loader2 className="w-5 h-5 animate-spin" /> : <ChevronRight className="w-5 h-5" />}
+            </button>
           </div>
         </div>
 
         <button 
-          onClick={() => handleSend("Analyse transversale de tous les documents, antécédents et allergies pour ce patient.", true)}
+          onClick={() => handleSend("Analyse transversale holistique : croisez les documents récents avec les antécédents et les allergies. Identifiez tout risque clinique ou incohérence thérapeutique.", true)}
           disabled={isSummarizing || documents.length === 0}
-          className="bg-emerald-500 p-6 rounded-3xl shadow-lg shadow-emerald-500/20 text-white flex items-start gap-4 hover:bg-emerald-600 transition-all group disabled:opacity-50 disabled:grayscale"
+          className="bg-emerald-500 p-8 rounded-[2.5rem] shadow-xl shadow-emerald-500/20 text-white flex items-center gap-6 hover:bg-emerald-600 transition-all group disabled:opacity-50 disabled:grayscale relative overflow-hidden"
         >
-          <div className="bg-emerald-400/30 p-3 rounded-2xl group-hover:scale-110 transition-transform">
-            <Sparkles className="w-6 h-6 text-white" />
+          <div className="bg-white/20 p-5 rounded-[1.75rem] group-hover:scale-110 transition-transform">
+            <Sparkles className="w-8 h-8 text-white" />
           </div>
           <div className="text-left">
-            <h3 className="font-bold">Générer Synthèse</h3>
-            <p className="text-emerald-50 text-sm mt-1 tracking-tight">Analyse holistique sécurisée.</p>
+            <h3 className="font-black text-xl tracking-tight">Synthèse Holistique</h3>
+            <p className="text-emerald-50 text-xs mt-1 font-bold opacity-80 uppercase tracking-widest">Analyse 360° du dossier</p>
+          </div>
+          <div className="absolute top-0 right-0 p-4 opacity-10">
+            <Bot className="w-20 h-20 rotate-12" />
           </div>
         </button>
       </div>
 
       {medResult && (
-        <div className="bg-indigo-50 dark:bg-indigo-900/20 p-6 rounded-3xl border border-indigo-100 dark:border-indigo-500/30 animate-in slide-in-from-top-4">
-           <div className="flex items-center gap-3 mb-4">
-             <Bot className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
-             <h4 className="text-sm font-black text-indigo-900 dark:text-indigo-100 uppercase tracking-widest">Informations Médicament</h4>
+        <div className="bg-white dark:bg-slate-900 p-10 rounded-[3rem] border-2 border-indigo-100 dark:border-indigo-500/20 animate-in slide-in-from-top-6 duration-500 shadow-2xl relative overflow-hidden">
+           <div className="absolute top-0 right-0 p-8 opacity-5">
+             <Pill className="w-32 h-32" />
            </div>
-           <div className="text-sm text-slate-700 dark:text-slate-200 leading-relaxed whitespace-pre-wrap mb-4">
-             {medResult.text}
+           <div className="flex items-center justify-between mb-8">
+             <div className="flex items-center gap-4">
+               <div className="bg-indigo-600 p-3 rounded-2xl text-white">
+                 <Bookmark className="w-6 h-6" />
+               </div>
+               <div>
+                 <h4 className="text-2xl font-black text-slate-800 dark:text-white tracking-tight">Fiche Médicament : {medQuery}</h4>
+                 <p className="text-[10px] font-black text-indigo-500 uppercase tracking-[0.3em]">Source : Google Search Grounding</p>
+               </div>
+             </div>
+             <button onClick={() => setMedResult(null)} className="text-slate-300 hover:text-red-500 transition-colors">
+                Fermer
+             </button>
            </div>
-           <div className="flex flex-wrap gap-2">
-             {medResult.sources.map((s, i) => (
-               s.web && (
-                 <a key={i} href={s.web.uri} target="_blank" rel="noopener" className="flex items-center gap-1 text-[10px] font-bold text-indigo-500 hover:underline">
-                   <ExternalLink className="w-3 h-3" /> {s.web.title}
-                 </a>
-               )
-             ))}
+           
+           <div className="prose prose-slate dark:prose-invert max-w-none">
+             <div className="text-base text-slate-700 dark:text-slate-200 leading-relaxed whitespace-pre-wrap font-medium border-l-4 border-indigo-500 pl-6 py-2">
+               {medResult.text}
+             </div>
            </div>
+
+           {medResult.sources.length > 0 && (
+             <div className="mt-10 pt-8 border-t border-slate-100 dark:border-white/5">
+               <span className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 block mb-5">Sources vérifiées (Vidal, EMA, HAS)</span>
+               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                 {medResult.sources.map((s, i) => (
+                   s.web && (
+                     <a 
+                      key={i} 
+                      href={s.web.uri} 
+                      target="_blank" 
+                      rel="noopener noreferrer" 
+                      className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-transparent hover:border-indigo-500/30 hover:bg-white dark:hover:bg-slate-800 transition-all group"
+                     >
+                       <span className="text-xs font-black text-slate-600 dark:text-slate-400 truncate max-w-[200px]">{s.web.title}</span>
+                       <ExternalLink className="w-4 h-4 text-indigo-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                     </a>
+                   )
+                 ))}
+               </div>
+             </div>
+           )}
         </div>
       )}
 
-      <div className={`flex items-center justify-between p-5 rounded-3xl border transition-all duration-300 ${
+      <div className={`flex items-center justify-between p-6 rounded-[2rem] border transition-all duration-500 ${
         isExpertMode 
-        ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-500/30 shadow-sm' 
+        ? 'bg-indigo-600 text-white border-transparent shadow-2xl shadow-indigo-600/20 scale-[1.02]' 
         : 'bg-white dark:bg-slate-900 border-slate-100 dark:border-white/5'
       }`}>
-        <div className="flex items-center gap-4">
-          <div className={`p-2.5 rounded-2xl transition-colors ${isExpertMode ? 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400' : 'bg-slate-50 dark:bg-slate-800 text-slate-400 dark:text-slate-500'}`}>
-            <BookOpen className="w-5 h-5" />
+        <div className="flex items-center gap-5">
+          <div className={`p-3.5 rounded-2xl transition-colors shadow-inner ${isExpertMode ? 'bg-white/20 text-white' : 'bg-slate-50 dark:bg-slate-800 text-slate-400'}`}>
+            <BookOpen className="w-6 h-6" />
           </div>
           <div>
-            <h4 className={`text-sm font-bold ${isExpertMode ? 'text-indigo-900 dark:text-indigo-200' : 'text-slate-700 dark:text-slate-300'}`}>Co-pilote Scientifique</h4>
-            <p className="text-xs text-slate-500 dark:text-slate-400">RAG Actif ({localStudies.length} références disponibles).</p>
+            <h4 className={`text-lg font-black tracking-tight ${isExpertMode ? 'text-white' : 'text-slate-800 dark:text-slate-100'}`}>Co-pilote Scientifique (RAG)</h4>
+            <p className={`text-xs font-medium ${isExpertMode ? 'text-indigo-100' : 'text-slate-500 dark:text-slate-400'}`}>Intègre {localStudies.length} publications locales dans l'analyse.</p>
           </div>
         </div>
         <button 
           onClick={() => setIsExpertMode(!isExpertMode)}
-          className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors focus:outline-none ${
-            isExpertMode ? 'bg-indigo-600' : 'bg-slate-200 dark:bg-slate-700'
+          className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors focus:outline-none shadow-inner ${
+            isExpertMode ? 'bg-indigo-400' : 'bg-slate-200 dark:bg-slate-700'
           }`}
         >
-          <span className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${
-            isExpertMode ? 'translate-x-6' : 'translate-x-1'
+          <span className={`inline-block h-6 w-6 transform rounded-full bg-white transition-transform shadow-md ${
+            isExpertMode ? 'translate-x-7' : 'translate-x-1'
           }`} />
         </button>
       </div>
 
       {showEmergency && (
-        <div className="bg-red-600 text-white p-5 rounded-3xl shadow-xl animate-in fade-in slide-in-from-top-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="bg-red-500 p-2 rounded-xl animate-pulse">
-              <AlertTriangle className="w-6 h-6" />
+        <div className="bg-red-600 text-white p-6 rounded-[2.5rem] shadow-2xl animate-in fade-in slide-in-from-top-6 flex items-center justify-between border-4 border-red-500/50">
+          <div className="flex items-center gap-5">
+            <div className="bg-white/20 p-3 rounded-2xl animate-pulse">
+              <AlertTriangle className="w-8 h-8" />
             </div>
             <div>
-              <p className="font-bold">Alerte IA : Attention Requise</p>
-              <p className="text-sm opacity-90 font-medium">Vérifiez les contre-indications ou risques d'urgence.</p>
+              <p className="text-xl font-black uppercase tracking-tight">Vigilance Clinique</p>
+              <p className="text-sm font-bold opacity-90 leading-tight">Risque identifié : vérifiez immédiatement les recommandations.</p>
             </div>
           </div>
-          <button className="bg-white text-red-600 px-5 py-2.5 rounded-2xl font-bold flex items-center gap-2 hover:bg-slate-100 transition-colors shadow-lg">
-            <PhoneCall className="w-4 h-4" /> Appeler le 15
+          <button className="bg-white text-red-600 px-6 py-4 rounded-2xl font-black flex items-center gap-3 hover:bg-slate-100 transition-all shadow-xl active:scale-95 text-sm uppercase tracking-widest">
+            <PhoneCall className="w-5 h-5" /> SAMU / 15
           </button>
         </div>
       )}
 
-      <div className={`bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-sm border flex flex-col transition-all duration-500 overflow-hidden ${
-        isExpertMode ? 'border-indigo-200 dark:border-indigo-500/30 ring-4 ring-indigo-500/5 dark:ring-indigo-500/10' : 'border-slate-100 dark:border-white/5'
+      <div className={`bg-white dark:bg-slate-900 rounded-[3rem] shadow-sm border flex flex-col transition-all duration-700 overflow-hidden min-h-[500px] ${
+        isExpertMode ? 'border-indigo-600/20 ring-[12px] ring-indigo-600/5' : 'border-slate-100 dark:border-white/5'
       }`}>
-        <div className={`overflow-y-auto px-8 py-6 space-y-5 transition-all duration-700 ${
-          chatHistory.length === 0 ? 'min-h-[120px]' : 'max-h-[600px] min-h-[300px]'
-        }`}>
+        <div className="flex-1 overflow-y-auto px-10 py-8 space-y-8 custom-scrollbar">
           {chatHistory.length === 0 && (
-            <div className="h-full flex items-center justify-center text-slate-300 dark:text-slate-600 gap-3">
-              <Bot className="w-6 h-6 opacity-30" />
-              <p className="text-sm font-medium italic opacity-60">"Dr. {doctor.name.split(' ').pop()}, je suis prêt à analyser ce dossier."</p>
+            <div className="h-full flex flex-col items-center justify-center text-slate-300 dark:text-slate-700 gap-4 opacity-40 py-20">
+              <Bot className="w-16 h-16 mb-2" />
+              <p className="text-lg font-black uppercase tracking-[0.3em] text-center">Consultation IA Active</p>
+              <p className="text-sm font-bold italic max-w-xs text-center leading-relaxed">"Je suis prêt à assister votre diagnostic, Dr. {doctor.name.split(' ').pop()}."</p>
             </div>
           )}
           
           {chatHistory.map((msg, i) => (
-            <div key={i} className={`flex gap-4 animate-in fade-in slide-in-from-bottom-2 duration-300 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+            <div key={i} className={`flex gap-5 animate-in fade-in slide-in-from-bottom-4 duration-500 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
               {msg.role === 'bot' && (
-                <div className={`w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-sm ${isExpertMode ? 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400' : 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400'}`}>
-                  <Bot className="w-6 h-6" />
+                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-lg ${isExpertMode ? 'bg-indigo-600 text-white' : 'bg-emerald-500 text-white'}`}>
+                  <Bot className="w-7 h-7" />
                 </div>
               )}
-              <div className={`max-w-[85%] px-5 py-4 rounded-[1.5rem] text-sm leading-relaxed shadow-sm ${
+              <div className={`max-w-[85%] px-7 py-5 rounded-[2rem] text-sm leading-[1.8] shadow-sm ${
                 msg.role === 'user' 
-                ? 'bg-slate-900 dark:bg-indigo-600 text-white rounded-tr-none font-medium' 
+                ? 'bg-slate-900 dark:bg-indigo-600 text-white rounded-tr-none font-bold' 
                 : msg.text.includes("⚠️") || msg.text.includes("ALERTE")
-                  ? 'bg-red-50 dark:bg-red-950 text-red-800 dark:text-red-200 border border-red-100 dark:border-red-900/50 rounded-tl-none font-bold'
-                  : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-tl-none border border-slate-100 dark:border-white/5 whitespace-pre-wrap'
+                  ? 'bg-red-50 dark:bg-red-950 text-red-800 dark:text-red-200 border-2 border-red-500/20 rounded-tl-none font-black'
+                  : 'bg-slate-50 dark:bg-slate-800/80 text-slate-700 dark:text-slate-200 rounded-tl-none border border-slate-100 dark:border-white/5 whitespace-pre-wrap font-medium text-base'
               }`}>
                 {msg.text}
               </div>
@@ -262,40 +299,44 @@ const Dashboard: React.FC<DashboardProps> = ({
           ))}
           
           {(isLoading || isSummarizing) && (
-            <div className="flex gap-4 animate-pulse">
-              <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${isExpertMode ? 'bg-indigo-100 dark:bg-indigo-900/40' : 'bg-emerald-100 dark:bg-emerald-900/40'}`}>
-                <Loader2 className={`w-6 h-6 animate-spin ${isExpertMode ? 'text-indigo-600 dark:text-indigo-400' : 'text-emerald-600 dark:text-emerald-400'}`} />
+            <div className="flex gap-5 animate-pulse">
+              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${isExpertMode ? 'bg-indigo-600 text-white' : 'bg-emerald-500 text-white'}`}>
+                <Loader2 className="w-7 h-7 animate-spin" />
               </div>
-              <div className="bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-white/5 px-5 py-4 rounded-[1.5rem] flex items-center gap-3">
-                <span className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">
-                  {isSummarizing ? "Analyse allergologique..." : "Réflexion clinique..."}
+              <div className="bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-white/5 px-7 py-5 rounded-[2rem] flex items-center gap-4">
+                <span className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.3em] animate-pulse">
+                  {isSummarizing ? "Génération Synthèse..." : "Raisonnement Clinique..."}
                 </span>
               </div>
             </div>
           )}
         </div>
 
-        <div className="p-6 border-t border-slate-100 dark:border-white/5 bg-white dark:bg-slate-900">
+        <div className="p-8 border-t border-slate-100 dark:border-white/5 bg-slate-50/30 dark:bg-slate-900/50 backdrop-blur-md">
           <div className="relative flex items-center group">
             <input
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-              placeholder={isExpertMode ? "Requête d'expertise scientifique..." : "Observations ou questions..."}
-              className={`w-full pl-6 pr-14 py-5 bg-slate-50 dark:bg-slate-800 border rounded-2xl focus:outline-none focus:ring-4 transition-all font-medium text-slate-800 dark:text-white placeholder:text-slate-300 dark:placeholder:text-slate-600 ${
-                isExpertMode ? 'border-indigo-100 dark:border-indigo-500/20 focus:ring-indigo-500/10' : 'border-slate-100 dark:border-white/5 focus:ring-emerald-500/10'
+              placeholder={isExpertMode ? "Requête d'expertise scientifique (RAG)..." : "Saisissez vos observations cliniques ou questions..."}
+              className={`w-full pl-8 pr-16 py-6 bg-white dark:bg-slate-800 border-2 rounded-[2.25rem] focus:outline-none focus:ring-[10px] transition-all font-bold text-slate-800 dark:text-white placeholder:text-slate-300 dark:placeholder:text-slate-600 shadow-xl ${
+                isExpertMode ? 'border-indigo-600 focus:ring-indigo-600/5' : 'border-slate-100 dark:border-white/5 focus:ring-emerald-500/5'
               }`}
             />
             <button
               onClick={() => handleSend()}
               disabled={isLoading || !query.trim()}
-              className={`absolute right-3 p-3 text-white rounded-xl disabled:opacity-30 transition-all shadow-lg active:scale-95 ${
+              className={`absolute right-3.5 p-4 text-white rounded-[1.5rem] disabled:opacity-30 transition-all shadow-xl active:scale-95 ${
                 isExpertMode ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-slate-900 dark:bg-indigo-500 hover:bg-slate-800'
               }`}
             >
-              <Send className="w-5 h-5" />
+              <Send className="w-6 h-6" />
             </button>
+          </div>
+          <div className="mt-4 flex justify-center gap-6 text-[9px] font-black uppercase tracking-[0.3em] text-slate-400">
+             <span className="flex items-center gap-1.5"><ShieldCheck className="w-3 h-3 text-emerald-500" /> Flux Chiffré AES</span>
+             <span className="flex items-center gap-1.5"><Bot className="w-3 h-3 text-indigo-500" /> Gemini-3 Pro-Vision</span>
           </div>
         </div>
       </div>

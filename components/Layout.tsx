@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { ShieldCheck, Activity, LogOut, LayoutDashboard, Users, FileText, History, Database, Sun, Moon, Mic, Lock } from 'lucide-react';
+import { ShieldCheck, Activity, LogOut, LayoutDashboard, Users, FileText, History, Database, Sun, Moon, Mic, Lock, CloudCheck, CloudOff, RefreshCw, CheckCircle2 } from 'lucide-react';
 import { StorageService } from '../services/storageService';
 
 interface LayoutProps {
@@ -9,9 +9,11 @@ interface LayoutProps {
   setActiveTab: (tab: string) => void;
   doctorName?: string;
   specialty?: string;
+  saveStatus?: 'saved' | 'saving' | 'error';
+  lastSaved?: number;
 }
 
-const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, doctorName, specialty }) => {
+const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, doctorName, specialty, saveStatus = 'saved', lastSaved }) => {
   const [isDark, setIsDark] = useState(() => localStorage.getItem('theme') === 'dark');
 
   useEffect(() => {
@@ -92,7 +94,31 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, doct
             <span className="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em] mb-1.5">
               {navItems.find(i => i.id === activeTab)?.label}
             </span>
-            <h2 className="text-xl font-black text-slate-800 dark:text-white tracking-tight">Espace de Travail Clinique</h2>
+            <div className="flex items-center gap-4">
+              <h2 className="text-xl font-black text-slate-800 dark:text-white tracking-tight">Espace de Travail Clinique</h2>
+              
+              {/* Indicateur de Sauvegarde Auto */}
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 dark:bg-slate-800 rounded-full border border-slate-200 dark:border-white/5">
+                {saveStatus === 'saving' ? (
+                  <>
+                    <RefreshCw className="w-3 h-3 text-indigo-500 animate-spin" />
+                    <span className="text-[9px] font-black text-slate-500 uppercase tracking-wider">Sync...</span>
+                  </>
+                ) : saveStatus === 'error' ? (
+                  <>
+                    <CloudOff className="w-3 h-3 text-red-500" />
+                    <span className="text-[9px] font-black text-red-500 uppercase tracking-wider">Erreur Stockage</span>
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="w-3 h-3 text-emerald-500" />
+                    <span className="text-[9px] font-black text-slate-500 uppercase tracking-wider">
+                      Protégé ({lastSaved ? new Date(lastSaved).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'Maintenant'})
+                    </span>
+                  </>
+                )}
+              </div>
+            </div>
           </div>
           
           <div className="flex items-center gap-6">
