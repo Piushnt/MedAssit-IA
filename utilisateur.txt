@@ -1,42 +1,41 @@
-🩺 GUIDE UTILISATEUR - MedAssist-IA Pro
-==========================================
+🩺 GUIDE UTILISATEUR - MedAssist-IA Pro (v1.3)
+==============================================
 
-Bienvenue dans votre nouvel environnement de travail clinique augmenté. Ce guide vous explique comment tirer le meilleur parti de chaque fonctionnalité.
+Bienvenue dans votre environnement clinique augmenté. Ce guide mis à jour détaille les nouvelles fonctionnalités pour optimiser votre flux de travail.
 
-1. ACCÈS ET SÉCURITÉ (Onglet Authentification)
-----------------------------------------------
-• Identification : Saisissez votre nom, spécialité et numéro RPPS. 
-• Conformité : Votre accès est protégé par un chiffrement local. Aucune donnée nominative ne transite par nos serveurs sans anonymisation préalable.
+1. ACCÈS ET SÉCURITÉ
+--------------------
+• Authentification : Votre numéro RPPS et spécialité sont stockés localement. 
+• Confidentialité : Les données sont anonymisées via `anonymizer.ts` avant tout traitement IA.
 
-2. LE SCRIBE AMBIANT (Onglet Scribe) - LA RÉVOLUTION DE LA PRISE DE NOTE
------------------------------------------------------------------------
-• Utilisation : Cliquez sur "Démarrer Scribe" au début de la consultation. L'IA écoute l'échange médecin-patient.
-• Objectif : Plus besoin de taper pendant que vous parlez. Dictez les constantes (ex: "Tension 14/9") naturellement.
-• Note SOAP : À la fin, cliquez sur "Structurer Note SOAP". L'IA génère automatiquement un compte-rendu structuré (Subjectif, Objectif, Évaluation, Plan) prêt à être copié dans votre logiciel de cabinet habituel.
+2. LE SCRIBE AMBIANT (Optimisé)
+-------------------------------
+• Nouveau Flow : Cliquez sur "Lancer le Scribe". Une fois la consultation terminée, utilisez "Polissage IA" pour obtenir un texte fluide débarrassé des tics de langage.
+• Génération SOAP : Cliquez sur "Structurer Note SOAP". L'IA utilise désormais Gemini 3 Flash pour produire un compte-rendu médical normé (S.O.A.P.) ultra-précis en moins de 3 secondes.
+• Raccourcis Vocaux : Dites "Scribe, TA 120/80" ou "Scribe, Pouls 70" pour une détection prioritaire des constantes.
 
-3. TABLEAU DE BORD (Onglet Dashboard) - L'ASSISTANT EXPERT
----------------------------------------------------------
-• Assistant Interactif : Posez des questions sur le dossier du patient ("Analyse cette prise de sang", "Risque d'interaction médicamenteuse ?").
-• Synthèse de Santé : Un bouton dédié permet de croiser TOUS les documents d'un patient pour en faire un résumé holistique en 10 secondes.
-• Mode Expertise : Activez le switch pour que l'IA consulte la base scientifique intégrée (RAG) et justifie ses réponses par des sources médicales.
-• Alertes Critiques : L'IA détecte automatiquement les urgences (⚠️) et les risques d'allergies.
+3. GESTION DES DOSSIERS PATIENTS
+--------------------------------
+• NOUVEAU : Rappels de Rendez-vous (RDV). Programmez les futurs contrôles directement dans le dossier patient. Un indicateur "RDV" apparaîtra sur les cartes de la liste.
+• Suivi Biologique : Visualisez l'évolution du pouls et de la tension via les graphiques dynamiques "Heartbeat".
+• Exportation : Exportez l'intégralité d'un dossier patient au format JSON pour l'interopérabilité avec d'autres systèmes.
 
-4. GESTION PATIENTÈLE (Onglet Patients)
----------------------------------------
-• Dossier Clinique : Créez des dossiers anonymisés. 
-• Allergies : Renseignez les allergies. Un badge rouge clignotant apparaîtra partout si un risque est détecté par l'IA lors de vos échanges.
-• Indicateurs : Visualisez l'IMC, la tension et le pouls pour suivre l'évolution clinique.
-• Documents : Importez comptes-rendus, ordonnances ou photos. L'IA les analyse automatiquement dès l'import.
-
-5. BASE SCIENTIFIQUE (Onglet Base Scientifique)
-----------------------------------------------
-• Recherche Live : Utilisez la puissance de Google Search Grounding pour trouver les dernières recommandations (HAS, ESC, ADA) en temps réel.
-• Protocoles Locaux : Consultez la bibliothèque de protocoles intégrée pour une pratique conforme aux standards actuels.
-
-6. SÉCURITÉ & AUDIT (Onglet Sécurité)
+4. GESTION DES DOCUMENTS (Améliorée)
 ------------------------------------
-• Traçabilité : Chaque action (consultation IA, import, suppression) est logguée dans un registre immuable conforme au RGPD.
-• Export : Vous pouvez exporter l'historique complet pour vos archives ou pour un transfert de dossier.
+• Multi-pages : Le système supporte désormais l'import de PDF multi-pages (simulé avec pageCount) et les galeries d'images.
+• Analyse IA Flash : Chaque document importé est lu par l'IA en arrière-plan pour extraire une synthèse critique (3 points clés + anomalies).
+• Vue Détaillée : Cliquez sur l'œil d'un document pour ouvrir la vue "Deep-Insight" incluant les métadonnées techniques et l'analyse complète.
+
+5. BASE SCIENTIFIQUE & RAG
+--------------------------
+• Filtres : Filtrez la bibliothèque locale par spécialité (Cardiologie, Neurologie, etc.).
+• Google Grounding : Utilisez la recherche mondiale pour obtenir des synthèses basées sur les dernières publications (HAS, EMA, The Lancet).
+• Co-pilote RAG : En activant le switch sur le Dashboard, l'IA croisera vos documents avec la bibliothèque scientifique pour des conseils basés sur les preuves.
+
+6. TABLEAU DE BORD (Copilote)
+-----------------------------
+• Synthèse Holistique : Un bouton "Analyse 360°" permet de fusionner tout le passif d'un patient pour une prise de décision éclairée.
+• Recherche Pharmaco : Trouvez instantanément les fiches médicaments via Google Search Grounding.
 
 ---
-Note : MedAssist-IA est un outil d'aide à la décision. Le praticien reste seul responsable du diagnostic final.
+Note : Les fonctionnalités IA nécessitent une clé API Gemini configurée dans l'environnement. Le praticien reste le seul garant de la validité clinique.

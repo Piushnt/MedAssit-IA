@@ -14,7 +14,14 @@ export const improveTranscript = async (rawTranscript: string): Promise<string> 
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
-      contents: `Nettoie cette transcription médicale brute. Supprime les 'euh', les répétitions inutiles et corrige la ponctuation sans altérer le sens clinique :\n\n"${rawTranscript}"`,
+      contents: `En tant que scribe médical expert, nettoie cette transcription brute. 
+      Instructions :
+      1. Supprime les bégaiements, hésitations ('euh', 'ben', 'alors') et tics de langage.
+      2. Corrige la ponctuation et la grammaire sans modifier le sens médical.
+      3. Préserve l'intégralité des faits cliniques, dosages et symptômes mentionnés.
+      4. Si le médecin s'adresse directement à toi ("Scribe, note que..."), reformule pour le dossier patient.
+      
+      Texte brut :\n\n"${rawTranscript}"`,
       config: { temperature: 0.1 }
     });
     return response.text || rawTranscript;
@@ -33,25 +40,25 @@ export const queryGemini = async (
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   
   const allergyContext = patientAllergies.length > 0 
-    ? `ATTENTION : Allergies du patient : ${patientAllergies.join(', ')}.`
-    : "Pas d'allergies connues.";
+    ? `IMPORTANT : Le patient est ALLERGIQUE à : ${patientAllergies.join(', ')}. Toute suggestion de traitement doit exclure ces substances.`
+    : "Aucune allergie connue renseignée.";
 
   const systemInstruction = isSummary 
-    ? `Expert médical. ${allergyContext} Crée une synthèse holistique.`
-    : `Expert médical. ${allergyContext} Aide au diagnostic.`;
+    ? `Vous êtes un Assistant Clinique de haut niveau. ${allergyContext} Synthétisez les documents du patient en un rapport cohérent mettant en évidence les tendances biologiques et les alertes potentielles.`
+    : `Vous êtes un Expert Médical Assistant. ${allergyContext} Analysez les données fournies pour répondre précisément aux questions du praticien. Basez vos réponses sur les preuves cliniques présentes dans les documents.`;
 
   const parts: any[] = documents.map(doc => {
     if (doc.mimeType && doc.mimeType.startsWith('image/')) {
       return { inlineData: { data: cleanBase64(doc.content), mimeType: doc.mimeType } };
     }
-    return { text: `Document ${doc.name}: ${doc.content}` };
+    return { text: `DOCUMENT [${doc.name}]:\n${doc.content}` };
   });
 
   if (sources.length > 0) {
-    parts.push({ text: `Protocoles: ${sources.map(s => s.contenu_texte).join('\n')}` });
+    parts.push({ text: `BASE DE CONNAISSANCES SCIENTIFIQUES :\n${sources.map(s => `[${s.id}] ${s.titre}: ${s.contenu_texte}`).join('\n')}` });
   }
 
-  parts.push({ text: prompt });
+  parts.push({ text: `REQUÊTE DU PRATICIEN :\n${prompt}` });
 
   try {
     const response: GenerateContentResponse = await ai.models.generateContent({
@@ -63,25 +70,32 @@ export const queryGemini = async (
         thinkingConfig: { thinkingBudget: 32768 }
       }
     });
-    return response.text || "Erreur de réponse.";
+    return response.text || "Désolé, l'analyse a échoué.";
   } catch (error) {
-    return "Erreur d'accès API.";
+    return "Erreur d'accès à l'intelligence clinique. Vérifiez la connectivité.";
   }
 };
 
 export const generateSOAPNote = async (transcript: string): Promise<string> => {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-  const systemInstruction = `Scribe médical expert. Transforme la transcription en note SOAP structurée (Subjectif, Objectif, Analyse, Plan). Sois précis et professionnel.`;
+  const systemInstruction = `Vous êtes un Scribe Médical Certifié. Transformez la transcription suivante en une note SOAP officielle.
+  STRUCTURE IMPÉRATIVE :
+  - SUBJECTIF : Motifs de consultation, antécédents racontés, symptômes décrits par le patient.
+  - OBJECTIF : Signes cliniques observés, constantes dictées (TA, Pouls), résultats d'examen mentionnés.
+  - ANALYSE (Assessment) : Hypothèses diagnostiques et synthèse de l'état clinique.
+  - PLAN : Examens complémentaires à prévoir, traitements prescrits, conseils donnés et suivi.
+  
+  Utilisez une terminologie médicale standardisée et un ton professionnel.`;
 
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
-      contents: `Transcription :\n${transcript}`,
-      config: { systemInstruction, temperature: 0.1 }
+      contents: `TRANSCRIPTION DE LA CONSULTATION :\n${transcript}`,
+      config: { systemInstruction, temperature: 0.2 }
     });
-    return response.text || "Échec de structuration.";
+    return response.text || "Échec de la structuration SOAP.";
   } catch (error) {
-    return "Erreur Scribe.";
+    return "Erreur critique du Scribe IA.";
   }
 };
 
@@ -90,15 +104,18 @@ export const searchMedicalGuidelines = async (query: string): Promise<{text: str
   try {
     const response = await ai.models.generateContent({
       model: "gemini-3-pro-preview",
-      contents: `Recommandations officielles (HAS/EMA) pour : ${query}`,
-      config: { tools: [{ googleSearch: {} }], thinkingConfig: { thinkingBudget: 16384 } },
+      contents: `Quelles sont les recommandations médicales actuelles et officielles pour : ${query} ? Formulez une réponse structurée pour un médecin.`,
+      config: { 
+        tools: [{ googleSearch: {} }], 
+        thinkingConfig: { thinkingBudget: 16384 } 
+      },
     });
     return {
-      text: response.text || "Aucun résultat.",
+      text: response.text || "Recherche infructueuse.",
       sources: response.candidates?.[0]?.groundingMetadata?.groundingChunks || []
     };
   } catch (error) {
-    return { text: "Erreur de recherche live.", sources: [] };
+    return { text: "Le service de recherche médicale est indisponible.", sources: [] };
   }
 };
 
@@ -115,10 +132,13 @@ export const analyzeClinicalDocument = async (doc: HealthDocument): Promise<stri
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: { parts },
-      config: { systemInstruction: "Analyse ce document médical. Résume en 3 points clés.", temperature: 0 }
+      config: { 
+        systemInstruction: "Analysez ce document clinique. Extrayez les 3 informations les plus critiques pour le suivi du patient et notez toute anomalie biologique majeure.", 
+        temperature: 0 
+      }
     });
-    return response.text || "Extraction impossible.";
+    return response.text || "Analyse automatique échouée.";
   } catch (error) {
-    return "Erreur analyse.";
+    return "Erreur d'analyse IA.";
   }
 };

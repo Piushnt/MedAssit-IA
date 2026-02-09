@@ -4,11 +4,62 @@ import { Patient, Doctor, HealthDocument, VitalEntry, Appointment } from '../typ
 import DocumentManager from './DocumentManager';
 import { generateUUID } from '../utils/uuid';
 
-interface PatientManagerProps {
-  patients: Patient[];
-  setPatients: (patients: Patient[] | ((prev: Patient[]) => Patient[])) => void;
-  doctor: Doctor;
-}
+const AppointmentsTimeline: React.FC<{ appointments: Appointment[] }> = ({ appointments }) => {
+  if (!appointments || appointments.length === 0) return (
+    <div className="mb-8 p-10 border-2 border-dashed border-slate-100 dark:border-white/5 rounded-[2.5rem] flex flex-col items-center justify-center opacity-40">
+      <Clock className="w-10 h-10 mb-3 text-slate-300" />
+      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Aucun historique de planification</p>
+    </div>
+  );
+
+  const sorted = [...appointments]
+    .filter(a => a.status !== 'cancelled')
+    .sort((a, b) => new Date(`${a.date}T${a.time || '00:00'}`).getTime() - new Date(`${b.date}T${b.time || '00:00'}`).getTime());
+
+  return (
+    <div className="mb-10 px-8 py-8 bg-slate-50 dark:bg-slate-900/40 rounded-[3rem] border border-slate-100 dark:border-white/5 relative overflow-hidden group/timeline">
+      <div className="absolute top-0 left-0 w-full h-1.5 bg-indigo-500/20"></div>
+      <div className="flex items-center gap-4 mb-8">
+        <div className="p-2 bg-indigo-500 rounded-xl shadow-lg shadow-indigo-500/20">
+          <TrendingUp className="w-4 h-4 text-white" />
+        </div>
+        <div>
+          <h5 className="text-[11px] font-black uppercase tracking-widest text-slate-800 dark:text-white leading-none">Progression des Soins</h5>
+          <p className="text-[9px] text-slate-400 font-bold uppercase mt-1">Timeline chronologique des sessions</p>
+        </div>
+      </div>
+      
+      <div className="relative pt-4 pb-2">
+        {/* Connecting Line */}
+        <div className="absolute top-[31px] left-8 right-8 h-0.5 bg-slate-200 dark:bg-slate-800"></div>
+        
+        <div className="flex items-start gap-0 relative overflow-x-auto pb-4 custom-scrollbar">
+          {sorted.map((app, idx) => {
+            const isPast = new Date(app.date).getTime() < Date.now();
+            return (
+              <div key={app.id} className="flex flex-col items-center min-w-[140px] group cursor-default">
+                {/* Node */}
+                <div className={`w-5 h-5 rounded-full border-4 z-10 transition-all duration-500 group-hover:scale-125 mb-4 ${
+                  isPast 
+                  ? 'bg-slate-300 border-white dark:border-slate-900 shadow-sm' 
+                  : 'bg-indigo-600 border-indigo-100 dark:border-indigo-900 shadow-xl shadow-indigo-500/40'
+                }`}></div>
+                
+                <div className="text-center px-2">
+                  <p className="text-[10px] font-black text-slate-800 dark:text-white uppercase truncate w-full mb-1 group-hover:text-indigo-500 transition-colors">{app.reason || 'Consultation'}</p>
+                  <p className={`text-[9px] font-black uppercase tracking-tighter ${isPast ? 'text-slate-400' : 'text-indigo-500'}`}>
+                    {new Date(app.date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}
+                  </p>
+                  <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">{app.time || '--:--'}</p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const VitalsChart: React.FC<{ data: VitalEntry[] }> = ({ data }) => {
   if (!data || data.length < 2) return (
@@ -80,6 +131,13 @@ const VitalsChart: React.FC<{ data: VitalEntry[] }> = ({ data }) => {
     </div>
   );
 };
+
+// Added missing PatientManagerProps interface
+interface PatientManagerProps {
+  patients: Patient[];
+  setPatients: (patients: Patient[] | ((prev: Patient[]) => Patient[])) => void;
+  doctor: Doctor;
+}
 
 const PatientManager: React.FC<PatientManagerProps> = ({ patients = [], setPatients, doctor }) => {
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
@@ -208,58 +266,56 @@ const PatientManager: React.FC<PatientManagerProps> = ({ patients = [], setPatie
               </div>
 
               <div className="pt-8 border-t border-slate-50 dark:border-white/5">
-                <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center justify-between mb-8">
                    <h4 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-widest flex items-center gap-3">
-                     <Calendar className="w-5 h-5 text-indigo-500" /> Rappels de Rendez-vous
+                     <Calendar className="w-5 h-5 text-indigo-500" /> Planification Thérapeutique
                    </h4>
-                   <button onClick={() => setShowApptForm(!showApptForm)} className="p-2 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 rounded-lg hover:bg-indigo-600 hover:text-white transition-all shadow-sm">
+                   <button onClick={() => setShowApptForm(!showApptForm)} className="p-2.5 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 rounded-xl hover:bg-indigo-600 hover:text-white transition-all shadow-sm border border-indigo-100 dark:border-indigo-500/20">
                     <Plus className="w-5 h-5" />
                    </button>
                 </div>
 
+                {/* New Chronological Timeline Component */}
+                <AppointmentsTimeline appointments={selectedPatient.appointments || []} />
+
                 {showApptForm && (
-                  <div className="mb-6 p-6 bg-slate-50 dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-white/5 animate-in slide-in-from-top-4 space-y-4 shadow-inner">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Date</label>
-                        <input type="date" className="w-full bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-100 dark:border-white/5 font-bold outline-none focus:ring-2 focus:ring-indigo-500/20" value={newAppt.date} onChange={e => setNewAppt({...newAppt, date: e.target.value})} />
+                  <div className="mb-8 p-8 bg-slate-50 dark:bg-slate-800 rounded-[2.5rem] border border-slate-200 dark:border-white/5 animate-in slide-in-from-top-4 space-y-6 shadow-inner relative">
+                    <button onClick={() => setShowApptForm(false)} className="absolute top-6 right-6 text-slate-400 hover:text-slate-600 transition-colors"><Plus className="w-5 h-5 rotate-45" /></button>
+                    <div className="grid grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">Date du RDV</label>
+                        <input type="date" className="w-full bg-white dark:bg-slate-900 px-5 py-4 rounded-2xl border border-slate-100 dark:border-white/5 font-bold outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all" value={newAppt.date} onChange={e => setNewAppt({...newAppt, date: e.target.value})} />
                       </div>
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Heure</label>
-                        <input type="time" className="w-full bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-100 dark:border-white/5 font-bold outline-none focus:ring-2 focus:ring-indigo-500/20" value={newAppt.time} onChange={e => setNewAppt({...newAppt, time: e.target.value})} />
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">Heure</label>
+                        <input type="time" className="w-full bg-white dark:bg-slate-900 px-5 py-4 rounded-2xl border border-slate-100 dark:border-white/5 font-bold outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all" value={newAppt.time} onChange={e => setNewAppt({...newAppt, time: e.target.value})} />
                       </div>
                     </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Motif</label>
-                      <input type="text" placeholder="Ex: Contrôle tension" className="w-full bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-100 dark:border-white/5 font-bold outline-none focus:ring-2 focus:ring-indigo-500/20" value={newAppt.reason} onChange={e => setNewAppt({...newAppt, reason: e.target.value})} />
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">Motif Clinique</label>
+                      <input type="text" placeholder="Ex: Contrôle post-opératoire, Suivi tension..." className="w-full bg-white dark:bg-slate-900 px-5 py-4 rounded-2xl border border-slate-100 dark:border-white/5 font-bold outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all" value={newAppt.reason} onChange={e => setNewAppt({...newAppt, reason: e.target.value})} />
                     </div>
-                    <button onClick={handleAddAppointment} className="w-full py-3 bg-indigo-600 text-white rounded-xl font-black uppercase text-xs tracking-widest hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-600/20">Programmer</button>
+                    <button onClick={handleAddAppointment} className="w-full py-5 bg-indigo-600 text-white rounded-[1.5rem] font-black uppercase text-xs tracking-widest hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-600/20 active:scale-95">Enregistrer le rendez-vous</button>
                   </div>
                 )}
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {selectedPatient.appointments?.map(app => (
-                    <div key={app.id} className="p-5 bg-white dark:bg-slate-800 border border-slate-100 dark:border-white/5 rounded-[1.75rem] flex items-center justify-between group hover:border-indigo-500 transition-all shadow-sm">
+                    <div key={app.id} className="p-6 bg-white dark:bg-slate-800 border border-slate-100 dark:border-white/5 rounded-[2.25rem] flex items-center justify-between group hover:border-indigo-500 transition-all shadow-sm">
                       <div className="flex items-center gap-4">
-                        <div className="p-3 bg-indigo-50 dark:bg-indigo-900/30 rounded-xl">
-                          <Bell className="w-4 h-4 text-indigo-500" />
+                        <div className="p-3.5 bg-indigo-50 dark:bg-indigo-950 text-indigo-500 rounded-2xl shadow-inner group-hover:scale-110 transition-transform">
+                          <Bell className="w-5 h-5" />
                         </div>
                         <div>
-                          <p className="text-xs font-black text-slate-800 dark:text-white tracking-tight">{app.reason || 'Consultation'}</p>
-                          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{app.date} • {app.time}</p>
+                          <p className="text-sm font-black text-slate-800 dark:text-white tracking-tight">{app.reason || 'Consultation'}</p>
+                          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">{app.date} • {app.time}</p>
                         </div>
                       </div>
-                      <button onClick={() => removeAppointment(app.id)} className="opacity-0 group-hover:opacity-100 p-2 text-slate-300 hover:text-red-500 transition-all">
+                      <button onClick={() => removeAppointment(app.id)} className="opacity-0 group-hover:opacity-100 p-3 text-slate-300 hover:text-red-500 transition-all bg-slate-50 dark:bg-slate-900 rounded-xl">
                         <Trash className="w-4 h-4" />
                       </button>
                     </div>
                   ))}
-                  {(!selectedPatient.appointments || selectedPatient.appointments.length === 0) && !showApptForm && (
-                    <div className="col-span-full py-8 flex flex-col items-center justify-center opacity-40">
-                      <Calendar className="w-8 h-8 mb-2 text-slate-300" />
-                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Aucun rendez-vous</p>
-                    </div>
-                  )}
                 </div>
               </div>
             </div>
