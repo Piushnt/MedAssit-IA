@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { UserPlus, User, Trash2, ChevronRight, ClipboardList, PlusCircle, ArrowLeft, AlertCircle, Activity, Heart, Scale, TrendingUp, Plus, Hash, Clock, ShieldCheck, Download, Calendar, Bell, Trash } from 'lucide-react';
+import { UserPlus, User, Trash2, ChevronRight, ClipboardList, PlusCircle, ArrowLeft, AlertCircle, Activity, Heart, Scale, TrendingUp, Plus, Hash, Clock, ShieldCheck, Download, Calendar, Bell, Trash, Weight } from 'lucide-react';
 import { Patient, Doctor, HealthDocument, VitalEntry, Appointment } from '../types';
 import DocumentManager from './DocumentManager';
 import { generateUUID } from '../utils/uuid';
@@ -146,7 +146,7 @@ const PatientManager: React.FC<PatientManagerProps> = ({ patients = [], setPatie
   const [showVitalForm, setShowVitalForm] = useState(false);
   const [showApptForm, setShowApptForm] = useState(false);
   
-  const [newVitals, setNewVitals] = useState<VitalEntry>({ timestamp: Date.now(), bp: '120/80', hr: 72, bmi: 24.5 });
+  const [newVitals, setNewVitals] = useState<VitalEntry>({ timestamp: Date.now(), bp: '120/80', hr: 72, bmi: 24.5, weight: 70 });
   const [newAppt, setNewAppt] = useState({ date: '', time: '', reason: '' });
   const [newPatient, setNewPatient] = useState({ patientId: '', nomAnonymise: '', age: 45, sexe: 'M' as 'M' | 'F' | 'Autre', antecedents: '', allergies: '' });
 
@@ -337,10 +337,10 @@ const PatientManager: React.FC<PatientManagerProps> = ({ patients = [], setPatie
 
           <div className="space-y-6">
             <div className="bg-slate-900 dark:bg-slate-950 p-8 rounded-[3rem] text-white space-y-8 flex flex-col shadow-2xl relative overflow-hidden border border-white/5">
-              <div className="absolute top-0 right-0 p-10 opacity-5"><Activity className="w-32 h-32" /></div>
-              <div className="flex items-center justify-between">
+              <div className="absolute top-0 right-0 p-10 opacity-5 pointer-events-none"><Activity className="w-32 h-32" /></div>
+              <div className="flex items-center justify-between relative z-10">
                 <h4 className="text-xs font-black uppercase tracking-widest text-slate-400">Suivi Clinique</h4>
-                <button onClick={() => setShowVitalForm(!showVitalForm)} className={`p-2 rounded-xl transition-all ${showVitalForm ? 'bg-red-500/20 text-red-400' : 'bg-white/10 text-white hover:bg-white/20'}`}>
+                <button type="button" onClick={() => setShowVitalForm(!showVitalForm)} className={`p-2 rounded-xl transition-all ${showVitalForm ? 'bg-red-500/20 text-red-400' : 'bg-white/10 text-white hover:bg-white/20'}`}>
                   {showVitalForm ? <Plus className="w-5 h-5 rotate-45" /> : <Plus className="w-5 h-5" />}
                 </button>
               </div>
@@ -354,6 +354,10 @@ const PatientManager: React.FC<PatientManagerProps> = ({ patients = [], setPatie
                   <div className="space-y-1">
                     <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Pouls (BPM)</label>
                     <input type="number" placeholder="Ex: 72" className="w-full bg-white/5 border border-white/10 p-4 rounded-xl font-bold outline-none focus:ring-2 focus:ring-indigo-500/40" value={newVitals.hr} onChange={e => setNewVitals({...newVitals, hr: parseInt(e.target.value) || 0})} />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Poids (kg)</label>
+                    <input type="number" placeholder="Ex: 70" className="w-full bg-white/5 border border-white/10 p-4 rounded-xl font-bold outline-none focus:ring-2 focus:ring-indigo-500/40" value={newVitals.weight} onChange={e => setNewVitals({...newVitals, weight: parseInt(e.target.value) || 0})} />
                   </div>
                   <button onClick={handleAddVitals} className="w-full py-4 bg-indigo-600 rounded-xl font-black text-xs uppercase tracking-widest shadow-xl shadow-indigo-600/20 active:scale-95 transition-all">Enregistrer</button>
                 </div>
@@ -372,6 +376,13 @@ const PatientManager: React.FC<PatientManagerProps> = ({ patients = [], setPatie
                       <span className="text-xs font-black uppercase tracking-widest text-slate-400">Pouls</span>
                     </div>
                     <span className="font-black text-2xl tabular-nums">{selectedPatient.vitalSigns?.hr || '—'} <span className="text-xs opacity-40">bpm</span></span>
+                  </div>
+                  <div className="flex items-center justify-between p-6 bg-white/5 rounded-[2rem] border border-white/5 group hover:bg-white/[0.08] transition-all">
+                    <div className="flex items-center gap-4">
+                      <Weight className="w-6 h-6 text-orange-400" />
+                      <span className="text-xs font-black uppercase tracking-widest text-slate-400">Poids</span>
+                    </div>
+                    <span className="font-black text-2xl tabular-nums">{selectedPatient.vitalSigns?.weight || '—'} <span className="text-xs opacity-40">kg</span></span>
                   </div>
                   <div className="pt-4 mt-4 border-t border-white/5">
                      <VitalsChart data={selectedPatient.vitalsHistory || []} />
@@ -448,7 +459,7 @@ const PatientManager: React.FC<PatientManagerProps> = ({ patients = [], setPatie
 
       {showAddForm && (
         <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-6 animate-in fade-in">
-           <div className="bg-white dark:bg-slate-900 w-full max-w-2xl p-12 rounded-[3.5rem] shadow-2xl border border-white/10 animate-in zoom-in-95 duration-300">
+           <div className="bg-white dark:bg-slate-900 w-full max-w-2xl p-12 rounded-[3.5rem] shadow-2xl border border-white/10 animate-in zoom-in-95 duration-300" onClick={e => e.stopPropagation()}>
              <div className="flex items-center justify-between mb-10">
                <h3 className="text-3xl font-black text-slate-800 dark:text-white tracking-tight">Nouveau Dossier Patient</h3>
                <div className="p-3 bg-indigo-50 dark:bg-indigo-900/30 rounded-2xl text-indigo-600">

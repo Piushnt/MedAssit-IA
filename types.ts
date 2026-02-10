@@ -23,6 +23,7 @@ export interface HealthDocument {
 export interface VitalEntry {
   timestamp: number;
   bmi?: number;
+  weight?: number;
   bp?: string;
   hr?: number;
 }

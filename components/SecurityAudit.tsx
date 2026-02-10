@@ -15,6 +15,17 @@ const SecurityAudit: React.FC = () => {
     setLogs(StorageService.getAuditLogs());
   };
 
+  const handleExportHDS = () => {
+    if (logs.length === 0) return;
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(logs, null, 2));
+    const downloadAnchorNode = document.createElement('a');
+    downloadAnchorNode.setAttribute("href",     dataStr);
+    downloadAnchorNode.setAttribute("download", `hds_audit_${new Date().toISOString().split('T')[0]}.json`);
+    document.body.appendChild(downloadAnchorNode);
+    downloadAnchorNode.click();
+    downloadAnchorNode.remove();
+  };
+
   return (
     <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in duration-500">
       <div className="flex items-center justify-between">
@@ -26,7 +37,11 @@ const SecurityAudit: React.FC = () => {
           <button onClick={refreshLogs} className="p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-2xl hover:bg-slate-50 transition-colors">
             <RefreshCcw className="w-5 h-5 text-slate-500" />
           </button>
-          <button className="bg-slate-900 dark:bg-indigo-600 text-white px-6 py-3 rounded-2xl font-black text-sm flex items-center gap-2 hover:opacity-90 transition-opacity">
+          <button 
+            onClick={handleExportHDS}
+            disabled={logs.length === 0}
+            className="bg-slate-900 dark:bg-indigo-600 text-white px-6 py-3 rounded-2xl font-black text-sm flex items-center gap-2 hover:opacity-90 transition-opacity disabled:opacity-20"
+          >
             <Download className="w-4 h-4" /> Export HDS
           </button>
         </div>
