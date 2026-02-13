@@ -6,17 +6,70 @@ const getApiKey = (): string => {
   const key = import.meta.env.VITE_GEMINI_API_KEY;
   if (!key) {
     console.warn("VITE_GEMINI_API_KEY is missing via import.meta.env");
-    // Fallback/Check for empty string
     return "";
   }
   return key;
 };
 
-// Initialize the SDK
+// Initialize the SDK - We keep a single instance
 const genAI = new GoogleGenerativeAI(getApiKey());
 
 const cleanBase64 = (base64: string): string => {
   return base64.replace(/^data:.*?;base64,/, "");
+};
+
+// List of models to try in order of preference/speed/cost
+export const FALLBACK_MODELS = [
+  "gemini-1.5-flash",
+  "gemini-1.5-flash-8b",
+  "gemini-1.5-pro",
+  "gemini-pro"
+];
+
+// Robust generator function that tries models in sequence
+export const runGenAIWithFallback = async (
+  payload: any[],
+  systemInstruction?: string,
+  temperature: number = 0.1
+): Promise<string> => {
+  if (!getApiKey()) return "Erreur: Clé API manquante.";
+
+  let lastError: any = null;
+
+  for (const modelName of FALLBACK_MODELS) {
+    try {
+      // Configure model
+      const modelConfig: any = {
+        model: modelName,
+      };
+
+      // systemInstruction support depends on model/SDK version, but passing it safe usually
+      if (systemInstruction) {
+        modelConfig.systemInstruction = systemInstruction;
+      }
+
+      const model = genAI.getGenerativeModel(modelConfig);
+
+      const result = await model.generateContent({
+        contents: [{ role: "user", parts: payload }],
+        generationConfig: { temperature }
+      });
+
+      const responseText = result.response.text();
+      if (responseText) {
+        // Success!
+        return responseText;
+      }
+    } catch (error: any) {
+      console.warn(`Model ${modelName} failed:`, error.message);
+      lastError = error;
+      // If it's not a 404 or capacity issue, it might be a request error, but we try next anyway to be safe
+      // specifically 404 (model not found) is what we want to catch
+    }
+  }
+
+  console.error("All AI models failed.", lastError);
+  return `Erreur IA: Impossible de générer une réponse avec les modèles disponibles. (${lastError?.message || "Erreur inconnue"})`;
 };
 
 /**
@@ -24,29 +77,16 @@ const cleanBase64 = (base64: string): string => {
  * et améliorer la ponctuation avant structuration.
  */
 export const improveTranscript = async (rawTranscript: string): Promise<string> => {
-  try {
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-    const result = await model.generateContent({
-      contents: [{
-        role: "user",
-        parts: [{
-          text: `En tant que scribe médical expert, nettoie cette transcription brute. 
+  const prompt = `En tant que scribe médical expert, nettoie cette transcription brute. 
       Instructions :
       1. Supprime les bégaiements, hésitations ('euh', 'ben', 'alors') et tics de langage.
       2. Corrige la ponctuation et la grammaire sans modifier le sens médical.
       3. Préserve l'intégralité des faits cliniques, dosages et symptômes mentionnés.
       4. Si le médecin s'adresse directement à toi ("Scribe, note que..."), reformule pour le dossier patient.
       
-      Texte brut :\n\n"${rawTranscript}"`
-        }]
-      }],
-      generationConfig: { temperature: 0.1 }
-    });
-    return result.response.text() || rawTranscript;
-  } catch (err) {
-    console.error("AI Error:", err);
-    return rawTranscript;
-  }
+      Texte brut :\n\n"${rawTranscript}"`;
+
+  return runGenAIWithFallback([{ text: prompt }], undefined, 0.1);
 };
 
 export const queryGemini = async (
@@ -56,7 +96,6 @@ export const queryGemini = async (
   sources: MedicalStudy[] = [],
   patientAllergies: string[] = []
 ): Promise<string> => {
-
   const allergyContext = patientAllergies.length > 0
     ? `IMPORTANT : Le patient est ALLERGIQUE à : ${patientAllergies.join(', ')}. Toute suggestion de traitement doit exclure ces substances.`
     : "Aucune allergie connue renseignée.";
@@ -78,26 +117,7 @@ export const queryGemini = async (
 
   parts.push({ text: `REQUÊTE DU PRATICIEN :\n${prompt}` });
 
-  try {
-    // Note: 'systemInstruction' is supported in the new SDK but requires specific initialization or beta version for older models.
-    // gemini-1.5-pro supports systemInstruction via systemInstruction param in getGenerativeModel
-    const model = genAI.getGenerativeModel({
-      model: "gemini-1.5-pro",
-      systemInstruction: systemInstruction
-    });
-
-    const result = await model.generateContent({
-      contents: [{ role: "user", parts: parts }],
-      generationConfig: {
-        temperature: 0.1,
-        // thinkingConfig not yet standard in this SDK version or requires newer model
-      }
-    });
-    return result.response.text() || "Désolé, l'analyse a échoué.";
-  } catch (error) {
-    console.error("AI Error:", error);
-    return "Erreur d'accès à l'intelligence clinique. Vérifiez la connectivité et la clé API.";
-  }
+  return runGenAIWithFallback(parts, systemInstruction, 0.1);
 };
 
 export const generateSOAPNote = async (transcript: string): Promise<string> => {
@@ -110,50 +130,19 @@ export const generateSOAPNote = async (transcript: string): Promise<string> => {
   
   Utilisez une terminologie médicale standardisée et un ton professionnel.`;
 
-  try {
-    const model = genAI.getGenerativeModel({
-      model: "gemini-1.5-flash",
-      systemInstruction: systemInstruction
-    });
-
-    const result = await model.generateContent({
-      contents: [{ role: "user", parts: [{ text: `TRANSCRIPTION DE LA CONSULTATION :\n${transcript}` }] }],
-      generationConfig: { temperature: 0.2 }
-    });
-    return result.response.text() || "Échec de la structuration SOAP.";
-  } catch (error) {
-    console.error("AI Error:", error);
-    return "Erreur critique du Scribe IA.";
-  }
+  return runGenAIWithFallback([{ text: `TRANSCRIPTION DE LA CONSULTATION :\n${transcript}` }], systemInstruction, 0.2);
 };
 
 export const searchMedicalGuidelines = async (query: string): Promise<{ text: string, sources: any[] }> => {
-  try {
-    // Note: Tools/Google Search might not be fully supported in the basic client SDK without valid config/permissions
-    // For now we map it as a standard request, assuming the model has built-in knowledge or user handles tools elsewhere.
-    // If specific googleSearch tool is needed, it must be configured in tools.
-    // gemini-1.5-pro supports tools.
-    const model = genAI.getGenerativeModel({
-      model: "gemini-1.5-pro",
-      // tools: [{ googleSearch: {} }] // Removed for basic stability unless confirmed supported by key
-    });
+  // Note: For basic search without tools, we just use the model's knowledge
+  const prompt = `Quelles sont les recommandations médicales actuelles et officielles pour : ${query} ? Formulez une réponse structurée pour un médecin.`;
 
-    // Fallback prompt for guidelines
-    const result = await model.generateContent({
-      contents: [{ role: "user", parts: [{ text: `Quelles sont les recommandations médicales actuelles et officielles pour : ${query} ? Formulez une réponse structurée pour un médecin.` }] }],
-      generationConfig: {
-        temperature: 0.1
-      },
-    });
+  const text = await runGenAIWithFallback([{ text: prompt }], undefined, 0.1);
 
-    return {
-      text: result.response.text() || "Recherche infructueuse.",
-      sources: [] // metadata grounding not always available in standard text response without specific tool use
-    };
-  } catch (error) {
-    console.error("AI Error:", error);
-    return { text: "Le service de recherche médicale est indisponible.", sources: [] };
-  }
+  return {
+    text: text,
+    sources: [] // metadata grounding not available in basic fallback mode
+  };
 };
 
 export const analyzeClinicalDocument = async (doc: HealthDocument): Promise<string> => {
@@ -164,19 +153,7 @@ export const analyzeClinicalDocument = async (doc: HealthDocument): Promise<stri
     parts.push({ text: doc.content });
   }
 
-  try {
-    const model = genAI.getGenerativeModel({
-      model: "gemini-1.5-flash",
-      systemInstruction: "Analysez ce document clinique. Extrayez les 3 informations les plus critiques pour le suivi du patient et notez toute anomalie biologique majeure."
-    });
+  const systemInstruction = "Analysez ce document clinique. Extrayez les 3 informations les plus critiques pour le suivi du patient et notez toute anomalie biologique majeure.";
 
-    const result = await model.generateContent({
-      contents: [{ role: "user", parts: parts }],
-      generationConfig: { temperature: 0 }
-    });
-    return result.response.text() || "Analyse automatique échouée.";
-  } catch (error) {
-    console.error("AI Error:", error);
-    return "Erreur d'analyse IA.";
-  }
+  return runGenAIWithFallback(parts, systemInstruction, 0);
 };
