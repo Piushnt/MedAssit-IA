@@ -1,8 +1,9 @@
+
 import React, { useRef, useState, useMemo } from 'react';
-import { Upload, FileText, Trash2, ShieldCheck, Search, Loader2, Zap, AlertCircle, Filter, ImageIcon, Eye, Layers, Clock, FileCheck } from 'lucide-react';
+import { Upload, Trash2, Search, Loader2, Zap, Clock, ImageIcon, Eye, Layers, FileCheck, FileText } from 'lucide-react';
 import { HealthDocument } from '../types';
 import { fileToBase64, anonymizeText } from '../utils/anonymizer';
-import { analyzeClinicalDocument } from '../services/geminiService';
+import { analyserPieceJointe } from '../services/analysisService';
 import { StorageService } from '../services/storageService';
 import { generateUUID } from '../utils/uuid';
 
@@ -47,7 +48,8 @@ const DocumentManager: React.FC<DocumentManagerProps> = ({ documents, setDocumen
         mimeType: file.type,
         timestamp: Date.now(),
         anonymized: true,
-        pageCount: file.type === 'application/pdf' ? Math.floor(Math.random() * 5) + 1 : 1 
+        // Simulation du nombre de pages pour les PDF
+        pageCount: file.type === 'application/pdf' ? Math.floor(Math.random() * 8) + 1 : 1 
       };
 
       newDocs.push(doc);
@@ -66,7 +68,7 @@ const DocumentManager: React.FC<DocumentManagerProps> = ({ documents, setDocumen
   const triggerAnalysis = async (id: string, doc: HealthDocument) => {
     setAnalyzingId(id);
     try {
-      const summary = await analyzeClinicalDocument(doc);
+      const summary = await analyserPieceJointe(doc);
       setDocuments(prev => prev.map(d => d.id === id ? { ...d, analysisSummary: summary } : d));
     } catch (err) {
       console.error(err);
@@ -118,14 +120,14 @@ const DocumentManager: React.FC<DocumentManagerProps> = ({ documents, setDocumen
             {analyzingId === doc.id && (
               <div className="absolute inset-0 bg-white/90 dark:bg-slate-900/95 z-20 flex flex-col items-center justify-center backdrop-blur-md animate-in fade-in">
                 <Loader2 className="w-10 h-10 text-indigo-500 animate-spin mb-4" />
-                <span className="text-[10px] font-black uppercase tracking-[0.3em] text-indigo-600">Lecture IA en cours</span>
+                <span className="text-[10px] font-black uppercase tracking-[0.3em] text-indigo-600">Lecture en cours</span>
               </div>
             )}
             
             <div className="p-8 flex-1 flex flex-col">
               <div className="flex justify-between items-start mb-6">
-                <div className={`p-4 rounded-2xl shadow-inner ${doc.mimeType.startsWith('image/') ? 'bg-orange-50 dark:bg-orange-950 text-orange-600' : 'bg-indigo-50 dark:bg-indigo-950 text-indigo-600'}`}>
-                  {doc.mimeType.startsWith('image/') ? <ImageIcon className="w-7 h-7" /> : <Layers className="w-7 h-7" />}
+                <div className={`p-4 rounded-2xl shadow-inner ${doc.mimeType.startsWith('image/') ? 'bg-orange-50 dark:bg-orange-950 text-orange-600' : doc.mimeType === 'application/pdf' ? 'bg-red-50 dark:bg-red-950 text-red-600' : 'bg-indigo-50 dark:bg-indigo-950 text-indigo-600'}`}>
+                  {doc.mimeType.startsWith('image/') ? <ImageIcon className="w-7 h-7" /> : doc.mimeType === 'application/pdf' ? <FileText className="w-7 h-7" /> : <Layers className="w-7 h-7" />}
                 </div>
                 <div className="flex gap-2">
                   <button onClick={() => setPreviewId(doc.id)} className="p-3 text-slate-300 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-xl transition-all opacity-0 group-hover:opacity-100"><Eye className="w-5 h-5" /></button>
@@ -137,14 +139,14 @@ const DocumentManager: React.FC<DocumentManagerProps> = ({ documents, setDocumen
               <div className="flex items-center gap-2 mb-6 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
                 <Clock className="w-3.5 h-3.5" /> {new Date(doc.timestamp).toLocaleDateString()}
                 <span className="w-1 h-1 bg-slate-200 rounded-full"></span>
-                <span className="text-indigo-500">{doc.pageCount || 1} PAGE(S)</span>
+                <span className={`${doc.pageCount && doc.pageCount > 1 ? 'text-red-500 animate-pulse' : 'text-indigo-500'}`}>{doc.pageCount || 1} PAGE(S)</span>
               </div>
 
               {doc.analysisSummary ? (
                 <div className="mt-auto p-6 bg-slate-50 dark:bg-slate-800/50 rounded-[2rem] border border-slate-100 dark:border-white/5 relative group/summary">
                   <div className="flex items-center gap-2 mb-3">
                     <Zap className="w-3.5 h-3.5 text-amber-500" />
-                    <span className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">Analyse Critique IA</span>
+                    <span className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">Synthèse Analytique</span>
                   </div>
                   <p className="text-[11px] text-slate-600 dark:text-slate-300 font-bold leading-relaxed line-clamp-4 italic group-hover/summary:line-clamp-none transition-all">
                     {doc.analysisSummary}
@@ -157,7 +159,7 @@ const DocumentManager: React.FC<DocumentManagerProps> = ({ documents, setDocumen
                     <div className="w-1.5 h-1.5 rounded-full bg-slate-200 animate-bounce delay-75"></div>
                     <div className="w-1.5 h-1.5 rounded-full bg-slate-200 animate-bounce delay-150"></div>
                   </div>
-                  <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest">En attente de traitement IA</span>
+                  <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest">En attente de traitement</span>
                 </div>
               )}
             </div>
@@ -167,50 +169,60 @@ const DocumentManager: React.FC<DocumentManagerProps> = ({ documents, setDocumen
 
       {previewId && selectedPreview && (
         <div className="fixed inset-0 z-50 bg-slate-950/95 backdrop-blur-2xl flex items-center justify-center p-10 animate-in fade-in duration-300" onClick={() => setPreviewId(null)}>
-          <div className="max-w-5xl w-full bg-white dark:bg-slate-900 rounded-[4rem] p-12 shadow-2xl relative animate-in zoom-in-95 overflow-hidden border border-white/10" onClick={e => e.stopPropagation()}>
+          <div className="max-w-6xl w-full bg-white dark:bg-slate-900 rounded-[4rem] p-12 shadow-2xl relative animate-in zoom-in-95 overflow-hidden border border-white/10" onClick={e => e.stopPropagation()}>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-               <div className="space-y-8">
+               <div className="space-y-8 h-full flex flex-col">
                   <div className="flex items-center gap-4">
                     <div className="p-4 bg-indigo-50 dark:bg-indigo-900/30 rounded-[1.5rem] text-indigo-600">
                       <FileCheck className="w-8 h-8" />
                     </div>
                     <div>
-                      <h5 className="text-3xl font-black text-slate-800 dark:text-white tracking-tight">{selectedPreview.name}</h5>
-                      <p className="text-xs font-black text-slate-400 uppercase tracking-widest mt-1">Identifiant : {selectedPreview.id}</p>
+                      <h5 className="text-3xl font-black text-slate-800 dark:text-white tracking-tight truncate max-w-sm">{selectedPreview.name}</h5>
+                      <p className="text-xs font-black text-slate-400 uppercase tracking-widest mt-1">Identifiant unique : {selectedPreview.id}</p>
                     </div>
                   </div>
                   
-                  {selectedPreview.mimeType.startsWith('image/') ? (
-                    <div className="rounded-[2.5rem] overflow-hidden border-4 border-slate-50 dark:border-white/5 shadow-2xl">
-                      <img src={`data:${selectedPreview.mimeType};base64,${selectedPreview.content}`} className="w-full max-h-[50vh] object-contain" alt="Aperçu" />
-                    </div>
-                  ) : (
-                    <div className="max-h-[50vh] overflow-y-auto p-10 bg-slate-50 dark:bg-slate-800 rounded-[2.5rem] text-slate-700 dark:text-slate-200 font-medium whitespace-pre-wrap leading-[1.8] text-lg shadow-inner custom-scrollbar">
-                      {selectedPreview.content}
-                    </div>
-                  )}
+                  <div className="flex-1 min-h-[50vh] rounded-[2.5rem] overflow-hidden border-4 border-slate-50 dark:border-white/5 shadow-2xl bg-slate-100 dark:bg-slate-800">
+                    {selectedPreview.mimeType.startsWith('image/') ? (
+                      <img src={`data:${selectedPreview.mimeType};base64,${selectedPreview.content}`} className="w-full h-full object-contain" alt="Aperçu" />
+                    ) : selectedPreview.mimeType === 'application/pdf' ? (
+                      <iframe 
+                        src={`data:application/pdf;base64,${selectedPreview.content}#toolbar=0`} 
+                        className="w-full h-full border-none"
+                        title="Aperçu PDF"
+                      />
+                    ) : (
+                      <div className="h-full overflow-y-auto p-10 text-slate-700 dark:text-slate-200 font-medium whitespace-pre-wrap leading-[1.8] text-lg custom-scrollbar">
+                        {selectedPreview.content}
+                      </div>
+                    )}
+                  </div>
                </div>
 
                <div className="flex flex-col">
                   <div className="p-8 bg-indigo-600 rounded-[3rem] text-white shadow-xl shadow-indigo-600/20 mb-8 relative overflow-hidden">
                     <div className="absolute top-0 right-0 p-8 opacity-10"><Zap className="w-24 h-24" /></div>
-                    <h5 className="text-xl font-black mb-6 flex items-center gap-3"><Zap className="w-6 h-6" /> Rapport d'Analyse IA</h5>
-                    <p className="text-lg leading-relaxed font-medium italic opacity-90">{selectedPreview.analysisSummary || "Synthèse en cours de génération..."}</p>
+                    <h5 className="text-xl font-black mb-6 flex items-center gap-3"><Zap className="w-6 h-6" /> Rapport d'Analyse Automatique</h5>
+                    <p className="text-lg leading-relaxed font-medium italic opacity-90">{selectedPreview.analysisSummary || "Analyse en cours..."}</p>
                   </div>
                   
                   <div className="flex-1 p-8 bg-slate-50 dark:bg-slate-800 rounded-[3rem] border border-slate-100 dark:border-white/5">
-                    <h6 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-6">Métadonnées du Document</h6>
+                    <h6 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-6">Métadonnées Cliniques</h6>
                     <div className="space-y-4">
                       <div className="flex justify-between items-center py-3 border-b border-slate-100 dark:border-white/5">
-                        <span className="text-sm font-bold text-slate-500">Horodatage</span>
+                        <span className="text-sm font-bold text-slate-500">Date d'import</span>
                         <span className="text-sm font-black text-slate-800 dark:text-white">{new Date(selectedPreview.timestamp).toLocaleString()}</span>
                       </div>
                       <div className="flex justify-between items-center py-3 border-b border-slate-100 dark:border-white/5">
-                        <span className="text-sm font-bold text-slate-500">MIME-Type</span>
+                        <span className="text-sm font-bold text-slate-500">Format</span>
                         <span className="text-sm font-black text-slate-800 dark:text-white uppercase">{selectedPreview.mimeType}</span>
                       </div>
+                      <div className="flex justify-between items-center py-3 border-b border-slate-100 dark:border-white/5">
+                        <span className="text-sm font-bold text-slate-500">Pagination</span>
+                        <span className="text-sm font-black text-indigo-600 dark:text-indigo-400">{selectedPreview.pageCount || 1} Page(s)</span>
+                      </div>
                       <div className="flex justify-between items-center py-3">
-                        <span className="text-sm font-bold text-slate-500">Volume</span>
+                        <span className="text-sm font-bold text-slate-500">Poids du fichier</span>
                         <span className="text-sm font-black text-slate-800 dark:text-white">{Math.round(selectedPreview.content.length / 1024)} KB</span>
                       </div>
                     </div>

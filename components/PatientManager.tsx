@@ -1,9 +1,11 @@
 
-import React, { useState } from 'react';
-import { UserPlus, User, Trash2, ChevronRight, ClipboardList, ArrowLeft, AlertCircle, Activity, Heart, TrendingUp, Plus, Hash, Clock, ShieldCheck, Download, Calendar, Bell, Trash, Weight } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { UserPlus, User, Trash2, ChevronRight, ClipboardList, ArrowLeft, AlertCircle, Activity, Heart, TrendingUp, Plus, Hash, Clock, ShieldCheck, Download, Calendar, Bell, Trash, Weight, FileArchive, Loader2, Check } from 'lucide-react';
+import JSZip from 'jszip';
 import { Patient, Doctor, HealthDocument, VitalEntry, Appointment } from '../types';
 import DocumentManager from './DocumentManager';
 import { generateUUID } from '../utils/uuid';
+import { StorageService } from '../services/storageService';
 
 const AppointmentsTimeline: React.FC<{ appointments: Appointment[] }> = ({ appointments }) => {
   if (!appointments || appointments.length === 0) return (
@@ -41,14 +43,16 @@ const AppointmentsTimeline: React.FC<{ appointments: Appointment[] }> = ({ appoi
               <div key={app.id} className="flex flex-col items-center min-w-[140px] group cursor-default">
                 {/* Node */}
                 <div className={`w-5 h-5 rounded-full border-4 z-10 transition-all duration-500 group-hover:scale-125 mb-4 ${
-                  isPast 
+                  app.status === 'reminded' 
+                  ? 'bg-amber-500 border-amber-100 dark:border-amber-900 shadow-lg shadow-amber-500/20' 
+                  : isPast 
                   ? 'bg-slate-300 border-white dark:border-slate-900 shadow-sm' 
                   : 'bg-indigo-600 border-indigo-100 dark:border-indigo-900 shadow-xl shadow-indigo-500/40'
                 }`}></div>
                 
                 <div className="text-center px-2">
                   <p className="text-[10px] font-black text-slate-800 dark:text-white uppercase truncate w-full mb-1 group-hover:text-indigo-500 transition-colors">{app.reason || 'Consultation'}</p>
-                  <p className={`text-[9px] font-black uppercase tracking-tighter ${isPast ? 'text-slate-400' : 'text-indigo-500'}`}>
+                  <p className={`text-[9px] font-black uppercase tracking-tighter ${app.status === 'reminded' ? 'text-amber-500' : isPast ? 'text-slate-400' : 'text-indigo-500'}`}>
                     {new Date(app.date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}
                   </p>
                   <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">{app.time || '--:--'}</p>
@@ -145,6 +149,9 @@ const PatientManager: React.FC<PatientManagerProps> = ({ patients = [], setPatie
   const [searchTerm, setSearchTerm] = useState('');
   const [showVitalForm, setShowVitalForm] = useState(false);
   const [showApptForm, setShowApptForm] = useState(false);
+  const [isExportingZip, setIsExportingZip] = useState(false);
+  const [isNotifying, setIsNotifying] = useState(false);
+  const [showNotificationToast, setShowNotificationToast] = useState(false);
   
   const [newVitals, setNewVitals] = useState<VitalEntry>({ timestamp: Date.now(), bp: '120/80', hr: 72, bmi: 24.5, weight: 70 });
   const [newAppt, setNewAppt] = useState({ date: '', time: '', reason: '' });
@@ -152,6 +159,42 @@ const PatientManager: React.FC<PatientManagerProps> = ({ patients = [], setPatie
 
   const patientList = Array.isArray(patients) ? patients : [];
   const selectedPatient = patientList.find(p => p.id === selectedPatientId);
+
+  // Identifie le prochain rendez-vous le plus proche
+  const nextAppointment = useMemo(() => {
+    if (!selectedPatient?.appointments) return null;
+    const now = Date.now();
+    return selectedPatient.appointments
+      .filter(a => a.status !== 'cancelled' && a.status !== 'completed')
+      .filter(a => new Date(`${a.date}T${a.time || '00:00'}`).getTime() > now)
+      .sort((a, b) => new Date(`${a.date}T${a.time || '00:00'}`).getTime() - new Date(`${b.date}T${b.time || '00:00'}`).getTime())[0];
+  }, [selectedPatient]);
+
+  const handleSendReminder = async () => {
+    if (!selectedPatient || !nextAppointment) return;
+    
+    setIsNotifying(true);
+    // Simulation d'un délai d'envoi réseau
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    
+    setPatients(prev => prev.map(p => {
+      if (p.id === selectedPatient.id) {
+        return {
+          ...p,
+          appointments: p.appointments.map(a => 
+            a.id === nextAppointment.id ? { ...a, status: 'reminded' as const } : a
+          )
+        };
+      }
+      return p;
+    }));
+    
+    StorageService.logAudit(`Envoi rappel RDV (${nextAppointment.reason})`, 'low', selectedPatient.id);
+    
+    setIsNotifying(false);
+    setShowNotificationToast(true);
+    setTimeout(() => setShowNotificationToast(false), 4000);
+  };
 
   const handleAddPatient = () => {
     const patient: Patient = {
@@ -181,6 +224,54 @@ const PatientManager: React.FC<PatientManagerProps> = ({ patients = [], setPatie
     dlAnchor.setAttribute("download", `dossier_${p.nomAnonymise}_${new Date().toISOString().split('T')[0]}.json`);
     dlAnchor.click();
     dlAnchor.remove();
+  };
+
+  const handleExportDocumentsZip = async (p: Patient) => {
+    if (!p.documents || p.documents.length === 0) {
+      alert("Aucun document à exporter pour ce patient.");
+      return;
+    }
+    
+    setIsExportingZip(true);
+    try {
+      const zip = new JSZip();
+      
+      p.documents.forEach((doc) => {
+        // Handle base64 content for images/PDFs
+        if (doc.mimeType.startsWith('image/') || doc.mimeType === 'application/pdf') {
+          try {
+            const binaryString = window.atob(doc.content);
+            const bytes = new Uint8Array(binaryString.length);
+            for (let i = 0; i < binaryString.length; i++) {
+              bytes[i] = binaryString.charCodeAt(i);
+            }
+            zip.file(doc.name, bytes);
+          } catch (e) {
+            console.error(`Error processing base64 for doc: ${doc.name}`, e);
+            // Fallback: save as text if base64 decoding fails
+            zip.file(`${doc.name}.txt`, "Error decoding document content. Raw base64 preserved: " + doc.content);
+          }
+        } else {
+          // Text files
+          zip.file(doc.name, doc.content);
+        }
+      });
+
+      const blob = await zip.generateAsync({ type: 'blob' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `documents_${p.nomAnonymise}_${new Date().toISOString().split('T')[0]}.zip`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("ZIP Generation error:", error);
+      alert("Une erreur est survenue lors de la création du fichier ZIP.");
+    } finally {
+      setIsExportingZip(false);
+    }
   };
 
   const handleAddVitals = () => {
@@ -217,14 +308,35 @@ const PatientManager: React.FC<PatientManagerProps> = ({ patients = [], setPatie
 
   if (selectedPatient) {
     return (
-      <div className="space-y-6 animate-in fade-in duration-300">
-        <div className="flex items-center justify-between">
-          <button onClick={() => setSelectedPatientId(null)} className="flex items-center gap-2 text-slate-500 hover:text-indigo-600 font-bold transition-all group">
+      <div className="space-y-6 animate-in fade-in duration-300 relative">
+        {/* Toast Notification */}
+        {showNotificationToast && (
+          <div className="fixed top-24 right-10 z-[60] bg-emerald-600 text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-4 animate-in slide-in-from-right-10 duration-500">
+            <div className="bg-white/20 p-2 rounded-xl"><Check className="w-5 h-5" /></div>
+            <div>
+              <p className="font-black text-sm uppercase tracking-tight">Rappel Envoyé</p>
+              <p className="text-xs font-bold opacity-80">Le patient a été notifié pour son prochain RDV.</p>
+            </div>
+          </div>
+        )}
+
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+          <button onClick={() => setSelectedPatientId(null)} className="flex items-center gap-2 text-slate-500 hover:text-indigo-600 font-bold transition-all group mr-auto">
             <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" /> Retour à la liste
           </button>
-          <button onClick={() => handleExportPatient(selectedPatient)} className="flex items-center gap-2 px-5 py-2.5 bg-slate-900 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-600 transition-all shadow-lg active:scale-95">
-            <Download className="w-4 h-4" /> Exporter Dossier
-          </button>
+          <div className="flex gap-3 w-full sm:w-auto">
+            <button 
+              onClick={() => handleExportDocumentsZip(selectedPatient)} 
+              disabled={isExportingZip || !selectedPatient.documents || selectedPatient.documents.length === 0}
+              className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 py-2.5 bg-indigo-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-lg active:scale-95 disabled:opacity-50"
+            >
+              {isExportingZip ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileArchive className="w-4 h-4" />} 
+              ZIP Docs
+            </button>
+            <button onClick={() => handleExportPatient(selectedPatient)} className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 py-2.5 bg-slate-900 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-600 transition-all shadow-lg active:scale-95">
+              <Download className="w-4 h-4" /> Dossier JSON
+            </button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -275,7 +387,43 @@ const PatientManager: React.FC<PatientManagerProps> = ({ patients = [], setPatie
                    </button>
                 </div>
 
-                <AppointmentsTimeline appointments={selectedPatient.appointments || []} />
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                  <div className="md:col-span-2">
+                    <AppointmentsTimeline appointments={selectedPatient.appointments || []} />
+                  </div>
+                  <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-[2.5rem] border border-slate-100 dark:border-white/5 flex flex-col items-center justify-center text-center">
+                    {nextAppointment ? (
+                      <>
+                        <div className={`p-4 rounded-2xl mb-4 transition-all ${nextAppointment.status === 'reminded' ? 'bg-emerald-100 text-emerald-600' : 'bg-indigo-100 text-indigo-600'}`}>
+                          <Bell className={`w-6 h-6 ${isNotifying ? 'animate-bounce' : ''}`} />
+                        </div>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Prochain Rappel</p>
+                        <p className="text-sm font-black text-slate-800 dark:text-white mb-4">
+                          {new Date(nextAppointment.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}
+                        </p>
+                        <button 
+                          onClick={handleSendReminder}
+                          disabled={isNotifying || nextAppointment.status === 'reminded'}
+                          className={`w-full py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all shadow-lg active:scale-95 flex items-center justify-center gap-2 ${
+                            nextAppointment.status === 'reminded'
+                            ? 'bg-emerald-500 text-white cursor-default'
+                            : 'bg-indigo-600 text-white hover:bg-indigo-700'
+                          }`}
+                        >
+                          {isNotifying ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : nextAppointment.status === 'reminded' ? <Check className="w-3.5 h-3.5" /> : <Bell className="w-3.5 h-3.5" />}
+                          {nextAppointment.status === 'reminded' ? 'Rappel Envoyé' : 'Notifier Patient'}
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <div className="p-4 bg-slate-100 dark:bg-slate-800 rounded-2xl mb-4 text-slate-400 opacity-40">
+                          <Bell className="w-6 h-6" />
+                        </div>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Aucun RDV à venir</p>
+                      </>
+                    )}
+                  </div>
+                </div>
 
                 {showApptForm && (
                   <div className="mb-8 p-8 bg-slate-50 dark:bg-slate-800 rounded-[2.5rem] border border-slate-200 dark:border-white/5 animate-in slide-in-from-top-4 space-y-6 shadow-inner relative">
