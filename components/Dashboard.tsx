@@ -1,8 +1,8 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Send, Bot, Loader2, Info, Sparkles, AlertTriangle, PhoneCall, BookOpen, Zap, UserCheck, Pill, Search, ExternalLink, Hash, ChevronRight, Bookmark, ShieldCheck } from 'lucide-react';
+import { Send, Activity, Loader2, Sparkles, AlertTriangle, PhoneCall, BookOpen, UserCheck, Pill, Search, ExternalLink, ChevronRight, Bookmark, ShieldCheck } from 'lucide-react';
 import { HealthDocument, AdviceLog, Doctor, Patient, MedicalStudy } from '../types';
-import { queryGemini, searchMedicalGuidelines } from '../services/geminiService';
+import { traiterRequeteClinique, rechercherDirectivesSante } from '../services/analysisService';
 import { generateUUID } from '../utils/uuid';
 
 interface DashboardProps {
@@ -38,7 +38,7 @@ const Dashboard: React.FC<DashboardProps> = ({
     fetch('/data/medical_database.json')
       .then(res => res.json())
       .then(data => setLocalStudies(data))
-      .catch(err => console.error("Erreur chargement études:", err));
+      .catch(err => console.error("Erreur base locale:", err));
   }, []);
 
   const handleSend = async (customPrompt?: string, isSummary: boolean = false) => {
@@ -53,7 +53,7 @@ const Dashboard: React.FC<DashboardProps> = ({
 
     try {
       const sources = isExpertMode ? localStudies : [];
-      const response = await queryGemini(promptToSend, documents, isSummary, sources, allergies);
+      const response = await traiterRequeteClinique(promptToSend, documents, isSummary, sources, allergies);
       
       const isUrgent = response.includes("⚠️") || response.toLowerCase().includes("urgent") || response.toLowerCase().includes("alerte");
       setShowEmergency(isUrgent);
@@ -70,7 +70,7 @@ const Dashboard: React.FC<DashboardProps> = ({
         });
       }
     } catch (err) {
-      setChatHistory(prev => [...prev, { role: 'bot', text: "Erreur lors de l'analyse IA. Vérifiez votre configuration de clé API Gemini." }]);
+      setChatHistory(prev => [...prev, { role: 'bot', text: "Erreur technique du moteur d'analyse clinique." }]);
     } finally {
       setIsLoading(false);
       setIsSummarizing(false);
@@ -82,7 +82,7 @@ const Dashboard: React.FC<DashboardProps> = ({
     setIsSearchingMed(true);
     setMedResult(null);
     try {
-      const result = await searchMedicalGuidelines(`Informations détaillées sur le médicament : ${medQuery}. Inclure la classe thérapeutique, les indications principales, les posologies usuelles, et les contre-indications majeures.`);
+      const result = await rechercherDirectivesSante(`Fiche clinique détaillée : ${medQuery}. Classe thérapeutique, indications, posologies et contre-indications.`);
       setMedResult(result);
     } catch (err) {
       console.error(err);
@@ -99,7 +99,7 @@ const Dashboard: React.FC<DashboardProps> = ({
             <UserCheck className="w-6 h-6" />
           </div>
           <div className="flex-1">
-            <label className="text-[10px] font-black uppercase text-slate-400 block mb-1 tracking-widest">Dossier Patient Actif</label>
+            <label className="text-[10px] font-black uppercase text-slate-400 block mb-1 tracking-widest">Dossier Actif</label>
             <select 
               value={selectedPatientId} 
               onChange={(e) => setSelectedPatientId(e.target.value)}
@@ -139,7 +139,7 @@ const Dashboard: React.FC<DashboardProps> = ({
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
               <input 
                 type="text" 
-                placeholder="Nom du médicament..."
+                placeholder="DCI ou nom commercial..."
                 className="w-full pl-11 pr-5 py-4 text-sm bg-slate-50 dark:bg-slate-800 rounded-2xl outline-none border border-transparent focus:border-indigo-500/30 transition-all font-bold"
                 value={medQuery}
                 onChange={e => setMedQuery(e.target.value)}
@@ -157,7 +157,7 @@ const Dashboard: React.FC<DashboardProps> = ({
         </div>
 
         <button 
-          onClick={() => handleSend("Analyse transversale holistique : croisez les documents récents avec les antécédents et les allergies. Identifiez tout risque clinique ou incohérence thérapeutique.", true)}
+          onClick={() => handleSend("Réaliser une synthèse clinique transversale : croiser les documents avec les antécédents et les allergies.", true)}
           disabled={isSummarizing || documents.length === 0}
           className="bg-emerald-500 p-8 rounded-[2.5rem] shadow-xl shadow-emerald-500/20 text-white flex items-center gap-6 hover:bg-emerald-600 transition-all group disabled:opacity-50 disabled:grayscale relative overflow-hidden"
         >
@@ -165,20 +165,14 @@ const Dashboard: React.FC<DashboardProps> = ({
             <Sparkles className="w-8 h-8 text-white" />
           </div>
           <div className="text-left">
-            <h3 className="font-black text-xl tracking-tight">Synthèse Holistique</h3>
-            <p className="text-emerald-50 text-xs mt-1 font-bold opacity-80 uppercase tracking-widest">Analyse 360° du dossier</p>
-          </div>
-          <div className="absolute top-0 right-0 p-4 opacity-10">
-            <Bot className="w-20 h-20 rotate-12" />
+            <h3 className="font-black text-xl tracking-tight">Analyse 360°</h3>
+            <p className="text-emerald-50 text-xs mt-1 font-bold opacity-80 uppercase tracking-widest">Synthèse complète du dossier</p>
           </div>
         </button>
       </div>
 
       {medResult && (
         <div className="bg-white dark:bg-slate-900 p-10 rounded-[3rem] border-2 border-indigo-100 dark:border-indigo-500/20 animate-in slide-in-from-top-6 duration-500 shadow-2xl relative overflow-hidden">
-           <div className="absolute top-0 right-0 p-8 opacity-5">
-             <Pill className="w-32 h-32" />
-           </div>
            <div className="flex items-center justify-between mb-8">
              <div className="flex items-center gap-4">
                <div className="bg-indigo-600 p-3 rounded-2xl text-white">
@@ -186,7 +180,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                </div>
                <div>
                  <h4 className="text-2xl font-black text-slate-800 dark:text-white tracking-tight">Fiche Médicament : {medQuery}</h4>
-                 <p className="text-[10px] font-black text-indigo-500 uppercase tracking-[0.3em]">Source : Google Search Grounding</p>
+                 <p className="text-[10px] font-black text-indigo-500 uppercase tracking-[0.3em]">Source : Directives de santé</p>
                </div>
              </div>
              <button onClick={() => setMedResult(null)} className="text-slate-300 hover:text-red-500 transition-colors">
@@ -199,28 +193,6 @@ const Dashboard: React.FC<DashboardProps> = ({
                {medResult.text}
              </div>
            </div>
-
-           {medResult.sources.length > 0 && (
-             <div className="mt-10 pt-8 border-t border-slate-100 dark:border-white/5">
-               <span className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 block mb-5">Sources vérifiées (Vidal, EMA, HAS)</span>
-               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                 {medResult.sources.map((s, i) => (
-                   s.web && (
-                     <a 
-                      key={i} 
-                      href={s.web.uri} 
-                      target="_blank" 
-                      rel="noopener noreferrer" 
-                      className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-transparent hover:border-indigo-500/30 hover:bg-white dark:hover:bg-slate-800 transition-all group"
-                     >
-                       <span className="text-xs font-black text-slate-600 dark:text-slate-400 truncate max-w-[200px]">{s.web.title}</span>
-                       <ExternalLink className="w-4 h-4 text-indigo-400 opacity-0 group-hover:opacity-100 transition-opacity" />
-                     </a>
-                   )
-                 ))}
-               </div>
-             </div>
-           )}
         </div>
       )}
 
@@ -234,8 +206,8 @@ const Dashboard: React.FC<DashboardProps> = ({
             <BookOpen className="w-6 h-6" />
           </div>
           <div>
-            <h4 className={`text-lg font-black tracking-tight ${isExpertMode ? 'text-white' : 'text-slate-800 dark:text-slate-100'}`}>Co-pilote Scientifique (RAG)</h4>
-            <p className={`text-xs font-medium ${isExpertMode ? 'text-indigo-100' : 'text-slate-500 dark:text-slate-400'}`}>Intègre {localStudies.length} publications locales dans l'analyse.</p>
+            <h4 className={`text-lg font-black tracking-tight ${isExpertMode ? 'text-white' : 'text-slate-800 dark:text-slate-100'}`}>Base Scientifique (Recherche Contextuelle)</h4>
+            <p className={`text-xs font-medium ${isExpertMode ? 'text-indigo-100' : 'text-slate-500 dark:text-slate-400'}`}>Indexation de {localStudies.length} publications cliniques.</p>
           </div>
         </div>
         <button 
@@ -258,11 +230,11 @@ const Dashboard: React.FC<DashboardProps> = ({
             </div>
             <div>
               <p className="text-xl font-black uppercase tracking-tight">Vigilance Clinique</p>
-              <p className="text-sm font-bold opacity-90 leading-tight">Risque identifié : vérifiez immédiatement les recommandations.</p>
+              <p className="text-sm font-bold opacity-90 leading-tight">Risque identifié dans le dossier.</p>
             </div>
           </div>
           <button className="bg-white text-red-600 px-6 py-4 rounded-2xl font-black flex items-center gap-3 hover:bg-slate-100 transition-all shadow-xl active:scale-95 text-sm uppercase tracking-widest">
-            <PhoneCall className="w-5 h-5" /> SAMU / 15
+            <PhoneCall className="w-5 h-5" /> Aide d'urgence
           </button>
         </div>
       )}
@@ -273,25 +245,17 @@ const Dashboard: React.FC<DashboardProps> = ({
         <div className="flex-1 overflow-y-auto px-10 py-8 space-y-8 custom-scrollbar">
           {chatHistory.length === 0 && (
             <div className="h-full flex flex-col items-center justify-center text-slate-300 dark:text-slate-700 gap-4 opacity-40 py-20">
-              <Bot className="w-16 h-16 mb-2" />
-              <p className="text-lg font-black uppercase tracking-[0.3em] text-center">Consultation IA Active</p>
-              <p className="text-sm font-bold italic max-w-xs text-center leading-relaxed">"Je suis prêt à assister votre diagnostic, Dr. {doctor.name.split(' ').pop()}."</p>
+              <Activity className="w-16 h-16 mb-2" />
+              <p className="text-lg font-black uppercase tracking-[0.3em] text-center">Moteur d'analyse clinique actif</p>
             </div>
           )}
           
           {chatHistory.map((msg, i) => (
             <div key={i} className={`flex gap-5 animate-in fade-in slide-in-from-bottom-4 duration-500 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-              {msg.role === 'bot' && (
-                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-lg ${isExpertMode ? 'bg-indigo-600 text-white' : 'bg-emerald-500 text-white'}`}>
-                  <Bot className="w-7 h-7" />
-                </div>
-              )}
               <div className={`max-w-[85%] px-7 py-5 rounded-[2rem] text-sm leading-[1.8] shadow-sm ${
                 msg.role === 'user' 
                 ? 'bg-slate-900 dark:bg-indigo-600 text-white rounded-tr-none font-bold' 
-                : msg.text.includes("⚠️") || msg.text.includes("ALERTE")
-                  ? 'bg-red-50 dark:bg-red-950 text-red-800 dark:text-red-200 border-2 border-red-500/20 rounded-tl-none font-black'
-                  : 'bg-slate-50 dark:bg-slate-800/80 text-slate-700 dark:text-slate-200 rounded-tl-none border border-slate-100 dark:border-white/5 whitespace-pre-wrap font-medium text-base'
+                : 'bg-slate-50 dark:bg-slate-800/80 text-slate-700 dark:text-slate-200 rounded-tl-none border border-slate-100 dark:border-white/5 whitespace-pre-wrap font-medium text-base'
               }`}>
                 {msg.text}
               </div>
@@ -300,12 +264,9 @@ const Dashboard: React.FC<DashboardProps> = ({
           
           {(isLoading || isSummarizing) && (
             <div className="flex gap-5 animate-pulse">
-              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${isExpertMode ? 'bg-indigo-600 text-white' : 'bg-emerald-500 text-white'}`}>
-                <Loader2 className="w-7 h-7 animate-spin" />
-              </div>
               <div className="bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-white/5 px-7 py-5 rounded-[2rem] flex items-center gap-4">
                 <span className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.3em] animate-pulse">
-                  {isSummarizing ? "Génération Synthèse..." : "Raisonnement Clinique..."}
+                  {isSummarizing ? "Génération Synthèse..." : "Analyse clinique..."}
                 </span>
               </div>
             </div>
@@ -319,7 +280,7 @@ const Dashboard: React.FC<DashboardProps> = ({
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-              placeholder={isExpertMode ? "Requête d'expertise scientifique (RAG)..." : "Saisissez vos observations cliniques ou questions..."}
+              placeholder="Saisissez vos observations cliniques ou questions..."
               className={`w-full pl-8 pr-16 py-6 bg-white dark:bg-slate-800 border-2 rounded-[2.25rem] focus:outline-none focus:ring-[10px] transition-all font-bold text-slate-800 dark:text-white placeholder:text-slate-300 dark:placeholder:text-slate-600 shadow-xl ${
                 isExpertMode ? 'border-indigo-600 focus:ring-indigo-600/5' : 'border-slate-100 dark:border-white/5 focus:ring-emerald-500/5'
               }`}
@@ -335,8 +296,8 @@ const Dashboard: React.FC<DashboardProps> = ({
             </button>
           </div>
           <div className="mt-4 flex justify-center gap-6 text-[9px] font-black uppercase tracking-[0.3em] text-slate-400">
-             <span className="flex items-center gap-1.5"><ShieldCheck className="w-3 h-3 text-emerald-500" /> Flux Chiffré AES</span>
-             <span className="flex items-center gap-1.5"><Bot className="w-3 h-3 text-indigo-500" /> Gemini-3 Pro-Vision</span>
+             <span className="flex items-center gap-1.5"><ShieldCheck className="w-3 h-3 text-emerald-500" /> Flux Chiffré AES-256</span>
+             <span className="flex items-center gap-1.5"><Activity className="w-3 h-3 text-indigo-500" /> Analyse Multidimensionnelle</span>
           </div>
         </div>
       </div>

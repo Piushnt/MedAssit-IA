@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { UserPlus, User, Trash2, ChevronRight, ClipboardList, PlusCircle, ArrowLeft, AlertCircle, Activity, Heart, Scale, TrendingUp, Plus, Hash, Clock, ShieldCheck, Download, Calendar, Bell, Trash, Weight } from 'lucide-react';
+import { UserPlus, User, Trash2, ChevronRight, ClipboardList, ArrowLeft, AlertCircle, Activity, Heart, TrendingUp, Plus, Hash, Clock, ShieldCheck, Download, Calendar, Bell, Trash, Weight } from 'lucide-react';
 import { Patient, Doctor, HealthDocument, VitalEntry, Appointment } from '../types';
 import DocumentManager from './DocumentManager';
 import { generateUUID } from '../utils/uuid';
@@ -167,7 +167,7 @@ const PatientManager: React.FC<PatientManagerProps> = ({ patients = [], setPatie
       vitalSigns: { ...newVitals },
       vitalsHistory: [{ ...newVitals }],
       appointments: [],
-      doctorId: doctor.id // Indique le docteur qui suit le patient
+      doctorId: doctor.id
     };
     setPatients([patient, ...patientList]);
     setShowAddForm(false);
@@ -199,7 +199,7 @@ const PatientManager: React.FC<PatientManagerProps> = ({ patients = [], setPatie
   };
 
   const removePatient = (id: string) => {
-    if (confirm("Voulez-vous vraiment supprimer ce dossier patient ?")) {
+    if (confirm("Supprimer définitivement ce dossier patient ?")) {
       setPatients(patientList.filter(p => p.id !== id));
       if (selectedPatientId === id) setSelectedPatientId(null);
     }
@@ -245,14 +245,8 @@ const PatientManager: React.FC<PatientManagerProps> = ({ patients = [], setPatie
                 </div>
                 <div className="flex flex-col items-end gap-2">
                   <div className="px-4 py-2 bg-indigo-50 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 rounded-xl border border-indigo-100 dark:border-indigo-500/20">
-                    <span className="text-[10px] font-black uppercase">Suivi par : Dr. {doctor.name}</span>
+                    <span className="text-[10px] font-black uppercase">Praticien : Dr. {doctor.name}</span>
                   </div>
-                  {selectedPatient.allergies && selectedPatient.allergies.length > 0 && (
-                    <div className="flex items-center gap-2 px-4 py-2 bg-red-50 dark:bg-red-950 text-red-600 dark:text-red-400 rounded-xl border border-red-100 dark:border-red-500/10">
-                      <AlertCircle className="w-4 h-4 animate-pulse" />
-                      <span className="text-[10px] font-black uppercase">Alerte Allergies</span>
-                    </div>
-                  )}
                 </div>
               </div>
 
@@ -298,30 +292,11 @@ const PatientManager: React.FC<PatientManagerProps> = ({ patients = [], setPatie
                     </div>
                     <div className="space-y-2">
                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">Motif Clinique</label>
-                      <input type="text" placeholder="Ex: Contrôle post-opératoire, Suivi tension..." className="w-full bg-white dark:bg-slate-900 px-5 py-4 rounded-2xl border border-slate-100 dark:border-white/5 font-bold outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all" value={newAppt.reason} onChange={e => setNewAppt({...newAppt, reason: e.target.value})} />
+                      <input type="text" placeholder="Ex: Contrôle post-opératoire..." className="w-full bg-white dark:bg-slate-900 px-5 py-4 rounded-2xl border border-slate-100 dark:border-white/5 font-bold outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all" value={newAppt.reason} onChange={e => setNewAppt({...newAppt, reason: e.target.value})} />
                     </div>
-                    <button onClick={handleAddAppointment} className="w-full py-5 bg-indigo-600 text-white rounded-[1.5rem] font-black uppercase text-xs tracking-widest hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-600/20 active:scale-95">Enregistrer le rendez-vous</button>
+                    <button onClick={handleAddAppointment} className="w-full py-5 bg-indigo-600 text-white rounded-[1.5rem] font-black uppercase text-xs tracking-widest hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-600/20 active:scale-95">Enregistrer</button>
                   </div>
                 )}
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {selectedPatient.appointments?.map(app => (
-                    <div key={app.id} className="p-6 bg-white dark:bg-slate-800 border border-slate-100 dark:border-white/5 rounded-[2.25rem] flex items-center justify-between group hover:border-indigo-500 transition-all shadow-sm">
-                      <div className="flex items-center gap-4">
-                        <div className="p-3.5 bg-indigo-50 dark:bg-indigo-950 text-indigo-500 rounded-2xl shadow-inner group-hover:scale-110 transition-transform">
-                          <Bell className="w-5 h-5" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-black text-slate-800 dark:text-white tracking-tight">{app.reason || 'Consultation'}</p>
-                          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">{app.date} • {app.time}</p>
-                        </div>
-                      </div>
-                      <button onClick={() => removeAppointment(app.id)} className="opacity-0 group-hover:opacity-100 p-3 text-slate-300 hover:text-red-500 transition-all bg-slate-50 dark:bg-slate-900 rounded-xl">
-                        <Trash className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
               </div>
             </div>
 
@@ -340,7 +315,7 @@ const PatientManager: React.FC<PatientManagerProps> = ({ patients = [], setPatie
               <div className="absolute top-0 right-0 p-10 opacity-5 pointer-events-none"><Activity className="w-32 h-32" /></div>
               <div className="flex items-center justify-between relative z-10">
                 <h4 className="text-xs font-black uppercase tracking-widest text-slate-400">Suivi Clinique</h4>
-                <button type="button" onClick={() => setShowVitalForm(!showVitalForm)} className={`p-2 rounded-xl transition-all ${showVitalForm ? 'bg-red-500/20 text-red-400' : 'bg-white/10 text-white hover:bg-white/20'}`}>
+                <button type="button" onClick={() => setShowVitalForm(!showVitalForm)} className={`p-2 rounded-xl transition-all z-20 ${showVitalForm ? 'bg-red-500/20 text-red-400' : 'bg-white/10 text-white hover:bg-white/20'}`}>
                   {showVitalForm ? <Plus className="w-5 h-5 rotate-45" /> : <Plus className="w-5 h-5" />}
                 </button>
               </div>
@@ -349,15 +324,15 @@ const PatientManager: React.FC<PatientManagerProps> = ({ patients = [], setPatie
                 <div className="space-y-4 animate-in slide-in-from-top-4 relative z-10">
                   <div className="space-y-1">
                     <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Tension Art.</label>
-                    <input type="text" placeholder="Ex: 120/80" className="w-full bg-white/5 border border-white/10 p-4 rounded-xl font-bold outline-none focus:ring-2 focus:ring-indigo-500/40" value={newVitals.bp} onChange={e => setNewVitals({...newVitals, bp: e.target.value})} />
+                    <input type="text" placeholder="Ex: 120/80" className="w-full bg-white/5 border border-white/10 p-4 rounded-xl font-bold outline-none focus:ring-2 focus:ring-indigo-500/40 text-white" value={newVitals.bp} onChange={e => setNewVitals({...newVitals, bp: e.target.value})} />
                   </div>
                   <div className="space-y-1">
                     <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Pouls (BPM)</label>
-                    <input type="number" placeholder="Ex: 72" className="w-full bg-white/5 border border-white/10 p-4 rounded-xl font-bold outline-none focus:ring-2 focus:ring-indigo-500/40" value={newVitals.hr} onChange={e => setNewVitals({...newVitals, hr: parseInt(e.target.value) || 0})} />
+                    <input type="number" placeholder="Ex: 72" className="w-full bg-white/5 border border-white/10 p-4 rounded-xl font-bold outline-none focus:ring-2 focus:ring-indigo-500/40 text-white" value={newVitals.hr} onChange={e => setNewVitals({...newVitals, hr: parseInt(e.target.value) || 0})} />
                   </div>
                   <div className="space-y-1">
                     <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Poids (kg)</label>
-                    <input type="number" placeholder="Ex: 70" className="w-full bg-white/5 border border-white/10 p-4 rounded-xl font-bold outline-none focus:ring-2 focus:ring-indigo-500/40" value={newVitals.weight} onChange={e => setNewVitals({...newVitals, weight: parseInt(e.target.value) || 0})} />
+                    <input type="number" placeholder="Ex: 70" className="w-full bg-white/5 border border-white/10 p-4 rounded-xl font-bold outline-none focus:ring-2 focus:ring-indigo-500/40 text-white" value={newVitals.weight} onChange={e => setNewVitals({...newVitals, weight: parseInt(e.target.value) || 0})} />
                   </div>
                   <button onClick={handleAddVitals} className="w-full py-4 bg-indigo-600 rounded-xl font-black text-xs uppercase tracking-widest shadow-xl shadow-indigo-600/20 active:scale-95 transition-all">Enregistrer</button>
                 </div>
@@ -394,9 +369,9 @@ const PatientManager: React.FC<PatientManagerProps> = ({ patients = [], setPatie
             <div className="p-6 bg-indigo-600/10 dark:bg-indigo-900/10 rounded-[2.5rem] border border-indigo-500/20">
                <div className="flex items-center gap-3 mb-3">
                  <ShieldCheck className="w-4 h-4 text-indigo-400" />
-                 <span className="text-[9px] font-black uppercase tracking-widest text-indigo-400">Sécurité des données</span>
+                 <span className="text-[9px] font-black uppercase tracking-widest text-indigo-400">Sécurité Active</span>
                </div>
-               <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-relaxed font-medium">Ce dossier est chiffré localement. Seul votre certificat peut déchiffrer les rapports médicaux.</p>
+               <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-relaxed font-medium">Les données vitales et cliniques sont chiffrées localement selon la norme AES-256.</p>
             </div>
           </div>
         </div>
@@ -419,7 +394,7 @@ const PatientManager: React.FC<PatientManagerProps> = ({ patients = [], setPatie
       <div className="bg-white dark:bg-slate-900 p-5 rounded-[2rem] border border-slate-100 dark:border-white/5 shadow-sm">
         <div className="relative group">
           <Activity className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 group-focus-within:text-indigo-500 transition-colors" />
-          <input type="text" placeholder="Rechercher un identifiant ou nom anonymisé..." className="w-full pl-16 pr-6 py-4 bg-slate-50 dark:bg-slate-800 rounded-2xl outline-none font-black text-slate-700 dark:text-white focus:ring-4 focus:ring-indigo-500/10 transition-all border border-transparent focus:border-indigo-500/20" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+          <input type="text" placeholder="Rechercher par identifiant ou pseudonyme..." className="w-full pl-16 pr-6 py-4 bg-slate-50 dark:bg-slate-800 rounded-2xl outline-none font-black text-slate-700 dark:text-white focus:ring-4 focus:ring-indigo-500/10 transition-all border border-transparent focus:border-indigo-500/20" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
         </div>
       </div>
 
@@ -440,9 +415,6 @@ const PatientManager: React.FC<PatientManagerProps> = ({ patients = [], setPatie
             <div className="mt-auto pt-6 border-t border-slate-50 dark:border-white/5 flex items-center justify-between">
               <div className="flex gap-4">
                 <span className="text-[10px] font-black text-slate-400 uppercase flex items-center gap-1.5"><ClipboardList className="w-3.5 h-3.5" /> {p.documents?.length || 0} Docs</span>
-                {p.appointments?.length > 0 && (
-                  <span className="text-[10px] font-black text-indigo-500 uppercase flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5" /> RDV</span>
-                )}
               </div>
               <ChevronRight className="w-6 h-6 text-slate-200 group-hover:text-indigo-500 group-hover:translate-x-1.5 transition-all" />
             </div>
@@ -452,7 +424,6 @@ const PatientManager: React.FC<PatientManagerProps> = ({ patients = [], setPatie
           <div className="col-span-full py-32 flex flex-col items-center justify-center bg-slate-100/30 dark:bg-slate-900/30 rounded-[3rem] border-2 border-dashed border-slate-200 dark:border-white/5">
             <User className="w-16 h-16 text-slate-200 dark:text-slate-800 mb-6" />
             <h4 className="text-lg font-black text-slate-400 uppercase tracking-widest">Aucun patient trouvé</h4>
-            <p className="text-slate-400 font-medium italic mt-2">Affinez votre recherche ou créez un nouveau dossier.</p>
           </div>
         )}
       </div>
@@ -468,19 +439,19 @@ const PatientManager: React.FC<PatientManagerProps> = ({ patients = [], setPatie
              </div>
              <div className="grid grid-cols-2 gap-6 mb-10">
                <div className="space-y-1">
-                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">ID Patient (RPPS/Local)</label>
+                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">ID Local</label>
                  <input type="text" placeholder="Ex: PAT-2024-01" className="w-full p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-white/5 font-bold outline-none focus:ring-4 focus:ring-indigo-500/10" value={newPatient.patientId} onChange={e => setNewPatient({...newPatient, patientId: e.target.value})} />
                </div>
                <div className="space-y-1">
-                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Pseudonyme / Initiales</label>
+                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Pseudonyme</label>
                  <input type="text" placeholder="Ex: Patient X" className="w-full p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-white/5 font-bold outline-none focus:ring-4 focus:ring-indigo-500/10" value={newPatient.nomAnonymise} onChange={e => setNewPatient({...newPatient, nomAnonymise: e.target.value})} />
                </div>
                <div className="space-y-1">
                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Âge</label>
-                 <input type="number" placeholder="45" className="w-full p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-white/5 font-bold outline-none focus:ring-4 focus:ring-indigo-500/10" value={newPatient.age} onChange={e => setNewPatient({...newPatient, age: parseInt(e.target.value) || 0})} />
+                 <input type="number" className="w-full p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-white/5 font-bold outline-none focus:ring-4 focus:ring-indigo-500/10" value={newPatient.age} onChange={e => setNewPatient({...newPatient, age: parseInt(e.target.value) || 0})} />
                </div>
                <div className="space-y-1">
-                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Sexe Biologique</label>
+                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Sexe</label>
                  <select className="w-full p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-white/5 font-bold outline-none appearance-none cursor-pointer" value={newPatient.sexe} onChange={e => setNewPatient({...newPatient, sexe: e.target.value as any})}>
                    <option value="M">Masculin</option>
                    <option value="F">Féminin</option>
@@ -488,17 +459,17 @@ const PatientManager: React.FC<PatientManagerProps> = ({ patients = [], setPatie
                  </select>
                </div>
                <div className="col-span-2 space-y-1">
-                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Allergies connues (séparées par virgules)</label>
-                 <input type="text" placeholder="Ex: Pénicilline, Iode..." className="w-full p-4 bg-red-50/50 dark:bg-red-950/20 rounded-2xl border border-red-100 dark:border-red-500/10 font-bold outline-none focus:ring-4 focus:ring-red-500/10" value={newPatient.allergies} onChange={e => setNewPatient({...newPatient, allergies: e.target.value})} />
+                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Allergies (séparées par virgules)</label>
+                 <input type="text" className="w-full p-4 bg-red-50/50 dark:bg-red-950/20 rounded-2xl border border-red-100 dark:border-red-500/10 font-bold outline-none focus:ring-4 focus:ring-red-500/10" value={newPatient.allergies} onChange={e => setNewPatient({...newPatient, allergies: e.target.value})} />
                </div>
                <div className="col-span-2 space-y-1">
-                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Antécédents & Observations</label>
-                 <textarea placeholder="Ex: HTA stable sous traitement, Asthme infantile..." className="w-full p-6 bg-slate-50 dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-white/5 font-bold outline-none focus:ring-4 focus:ring-indigo-500/10 h-32 leading-relaxed" value={newPatient.antecedents} onChange={e => setNewPatient({...newPatient, antecedents: e.target.value})} />
+                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Antécédents</label>
+                 <textarea className="w-full p-6 bg-slate-50 dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-white/5 font-bold outline-none focus:ring-4 focus:ring-indigo-500/10 h-32" value={newPatient.antecedents} onChange={e => setNewPatient({...newPatient, antecedents: e.target.value})} />
                </div>
              </div>
              <div className="flex justify-end gap-6">
                <button onClick={() => setShowAddForm(false)} className="px-8 py-4 font-black text-slate-400 uppercase tracking-widest hover:text-slate-600 transition-colors">Annuler</button>
-               <button onClick={handleAddPatient} className="px-10 py-4 bg-indigo-600 text-white rounded-[1.5rem] font-black uppercase text-sm tracking-widest shadow-xl shadow-indigo-600/20 active:scale-95 transition-all">Créer le dossier médical</button>
+               <button onClick={handleAddPatient} className="px-10 py-4 bg-indigo-600 text-white rounded-[1.5rem] font-black uppercase text-sm tracking-widest shadow-xl shadow-indigo-600/20 active:scale-95 transition-all">Créer le dossier</button>
              </div>
            </div>
         </div>

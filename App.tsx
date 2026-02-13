@@ -78,7 +78,6 @@ const App: React.FC = () => {
 
   if (!doctor) {
     return <Auth onComplete={(doc) => {
-      // Fixed: use setCurrentDoctorId as saveDoctor does not exist in StorageService
       StorageService.setCurrentDoctorId(doc.id);
       setDoctor(doc);
     }} />;
@@ -120,7 +119,7 @@ const App: React.FC = () => {
                <div className="relative z-10">
                 <h3 className="text-2xl font-black text-slate-800 dark:text-white mb-3 tracking-tight">Mes Protocoles & Ressources</h3>
                 <p className="text-slate-400 font-medium mb-12 max-w-xl leading-relaxed">
-                  Bibliothèque transversale utilisée comme contexte additionnel par l'IA.
+                  Bibliothèque transversale utilisée comme contexte additionnel par le moteur expert.
                 </p>
                 <DocumentManager documents={globalDocs} setDocuments={saveGlobalDocs} />
                </div>

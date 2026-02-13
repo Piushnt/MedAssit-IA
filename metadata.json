@@ -1,6 +1,6 @@
 {
-  "name": "MedAssist-IA Pro",
-  "description": "Système expert d'assistance clinique avec RAG scientifique, propulsé par Gemini 3 Pro. Analyse de dossiers patients, synthèse médicale et co-pilote de diagnostic avec chiffrement AES-256.",
+  "name": "MediAssist-IA",
+  "description": "Système expert d'assistance clinique de grade médical. Analyse de dossiers patients, synthèse multidimensionnelle et structuration de notes SOAP avec chiffrement de bout en bout.",
   "requestFramePermissions": [
     "camera",
     "microphone"
