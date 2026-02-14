@@ -32,27 +32,26 @@ export const runGenAIWithFallback = async (
   systemInstruction?: string,
   temperature: number = 0.1
 ): Promise<string> => {
-  if (!getApiKey()) return "Erreur: Clé API manquante.";
+  if (!getApiKey()) {
+    console.error("AI Service: Missing API Key");
+    return "Erreur: Clé API manquante.";
+  }
 
   let lastError: any = null;
 
-  console.log(`[AI-DEBUG] Starting AI request. Payload parts: ${payload.length}`);
+  console.log(`[AI-DEBUG] Starting AI request. Payload parts: ${payload.length}. Has System Instr: ${!!systemInstruction}`);
 
   for (const modelName of FALLBACK_MODELS) {
     console.log(`[AI-DEBUG] Attempting model: ${modelName}`);
-    try {
-      // Configure model
-      const modelConfig: any = {
-        model: modelName,
-      };
 
-      // systemInstruction support depends on model/SDK version, but passing it safe usually
+    // Strategy 1: Standard usage (System Instruction via parameter)
+    try {
+      const modelConfig: any = { model: modelName };
       if (systemInstruction) {
         modelConfig.systemInstruction = systemInstruction;
       }
 
       const model = genAI.getGenerativeModel(modelConfig);
-
       const result = await model.generateContent({
         contents: [{ role: "user", parts: payload }],
         generationConfig: { temperature }
@@ -60,19 +59,47 @@ export const runGenAIWithFallback = async (
 
       const responseText = result.response.text();
       if (responseText) {
-        console.log(`[AI-DEBUG] Success with model: ${modelName}`);
+        console.log(`[AI-DEBUG] Success with model: ${modelName} (Standard)`);
         return responseText;
       }
     } catch (error: any) {
-      console.warn(`[AI-DEBUG] Model ${modelName} failed:`, error.message);
+      console.warn(`[AI-DEBUG] Model ${modelName} (Standard) failed:`, error.message);
       lastError = error;
-      // If it's not a 404 or capacity issue, it might be a request error, but we try next anyway to be safe
-      // specifically 404 (model not found) is what we want to catch
+
+      if (error.message?.includes("API key not valid")) {
+        return "Erreur Critique: Clé API invalide.";
+      }
+    }
+
+    // Strategy 2: Fallback usage (Merge System Instruction into Prompt)
+    if (systemInstruction) {
+      try {
+        console.log(`[AI-DEBUG] Retrying model ${modelName} with System Instruction merged into prompt...`);
+
+        const fallbackPayload = [
+          { text: `INSTRUCTIONS SYSTÈME :\n${systemInstruction}\n\nREQUÊTE :\n` },
+          ...payload
+        ];
+
+        const model = genAI.getGenerativeModel({ model: modelName }); // No systemInstruction config
+        const result = await model.generateContent({
+          contents: [{ role: "user", parts: fallbackPayload }],
+          generationConfig: { temperature }
+        });
+
+        const responseText = result.response.text();
+        if (responseText) {
+          console.log(`[AI-DEBUG] Success with model: ${modelName} (Merged Prompt)`);
+          return responseText;
+        }
+      } catch (error: any) {
+        console.warn(`[AI-DEBUG] Model ${modelName} (Merged Prompt) failed:`, error.message);
+      }
     }
   }
 
-  console.error("All AI models failed.", lastError);
-  return `Erreur IA: Impossible de générer une réponse avec les modèles disponibles. (${lastError?.message || "Erreur inconnue"})`;
+  console.error("AI Critical: All models failed.", lastError);
+  return `Erreur IA: Impossible de générer une réponse. Dernier échec: ${lastError?.message || "Inconnu"}`;
 };
 
 /**
