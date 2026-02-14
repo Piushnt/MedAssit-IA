@@ -36,7 +36,10 @@ export const runGenAIWithFallback = async (
 
   let lastError: any = null;
 
+  console.log(`[AI-DEBUG] Starting AI request. Payload parts: ${payload.length}`);
+
   for (const modelName of FALLBACK_MODELS) {
+    console.log(`[AI-DEBUG] Attempting model: ${modelName}`);
     try {
       // Configure model
       const modelConfig: any = {
@@ -57,11 +60,11 @@ export const runGenAIWithFallback = async (
 
       const responseText = result.response.text();
       if (responseText) {
-        // Success!
+        console.log(`[AI-DEBUG] Success with model: ${modelName}`);
         return responseText;
       }
     } catch (error: any) {
-      console.warn(`Model ${modelName} failed:`, error.message);
+      console.warn(`[AI-DEBUG] Model ${modelName} failed:`, error.message);
       lastError = error;
       // If it's not a 404 or capacity issue, it might be a request error, but we try next anyway to be safe
       // specifically 404 (model not found) is what we want to catch
