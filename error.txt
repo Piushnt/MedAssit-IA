@@ -1,3 +1,0 @@
-components/PatientManager.tsx(4,19): error TS2307: Cannot find module 'jszip' or its corresponding type declarations.
-services/analysisService.ts(12,27): error TS2339: Property 'env' does not exist on type 'ImportMeta'.
-services/geminiService.ts(6,27): error TS2339: Property 'env' does not exist on type 'ImportMeta'.

@@ -30,7 +30,10 @@ export const FALLBACK_MODELS = [
 export const runGenAIWithFallback = async (
   payload: any[],
   systemInstruction?: string,
-  temperature: number = 0.1
+  temperature: number = 0.1,
+  presencePenalty?: number,
+  frequencyPenalty?: number,
+  stopSequences?: string[]
 ): Promise<string> => {
   if (!getApiKey()) {
     console.error("AI Service: Missing API Key");
@@ -40,6 +43,12 @@ export const runGenAIWithFallback = async (
   let lastError: any = null;
 
   console.log(`[AI-DEBUG] Starting AI request. Payload parts: ${payload.length}. Has System Instr: ${!!systemInstruction}`);
+
+  // Base configuration
+  const baseConfig: any = { temperature };
+  if (presencePenalty !== undefined) baseConfig.presencePenalty = presencePenalty;
+  if (frequencyPenalty !== undefined) baseConfig.frequencyPenalty = frequencyPenalty;
+  if (stopSequences) baseConfig.stopSequences = stopSequences;
 
   for (const modelName of FALLBACK_MODELS) {
     console.log(`[AI-DEBUG] Attempting model: ${modelName}`);
@@ -54,7 +63,7 @@ export const runGenAIWithFallback = async (
       const model = genAI.getGenerativeModel(modelConfig);
       const result = await model.generateContent({
         contents: [{ role: "user", parts: payload }],
-        generationConfig: { temperature }
+        generationConfig: baseConfig
       });
 
       const responseText = result.response.text();
@@ -84,7 +93,7 @@ export const runGenAIWithFallback = async (
         const model = genAI.getGenerativeModel({ model: modelName }); // No systemInstruction config
         const result = await model.generateContent({
           contents: [{ role: "user", parts: fallbackPayload }],
-          generationConfig: { temperature }
+          generationConfig: baseConfig
         });
 
         const responseText = result.response.text();

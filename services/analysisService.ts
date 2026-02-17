@@ -11,7 +11,7 @@ const cleanBuffer = (data: string): string => {
  */
 export const optimiserFluxTexte = async (rawInput: string): Promise<string> => {
   const prompt = `Optimiser la clarté et la ponctuation du texte suivant tout en préservant l'intégralité des faits cliniques mentionnés :\n\n"${rawInput}"`;
-  return runGenAIWithFallback([{ text: prompt }], undefined, 0.1);
+  return runGenAIWithFallback([{ text: prompt }], undefined, 0.1, 0.6, 0.5);
 };
 
 /**

@@ -39,3 +39,4 @@ MediAssist-IA intègre nativement un module d'anonymisation qui masque les ident
 
 ---
 *Système professionnel d'aide à la consultation Médicale (MediAssist-IA)*
+## Pius HONONTA
