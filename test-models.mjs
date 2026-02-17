@@ -1,11 +1,11 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-const API_KEY = "AIzaSyCMz6anIR6FELBvrzWjmZtkV7hHi2o9iSc";
+const API_KEY = "VOTRE_CLE_ICI"; // NE PAS COMMITER DE CLE REELLE
 
 const genAI = new GoogleGenerativeAI(API_KEY);
 
 async function checkModels() {
-    const modelsToTest = ["gemini-1.5-flash", "gemini-1.5-pro", "gemini-pro"];
+    const modelsToTest = ["gemini-3-flash", "gemini-3-pro", "gemini-3-deep-think", "gemini-2.5-flash", "gemini-2.5-pro"];
 
     console.log("--- START MODEL CHECK ---");
 
