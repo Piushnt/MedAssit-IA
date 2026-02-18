@@ -1,5 +1,5 @@
 
-import { HealthDocument, MedicalStudy } from "../types";
+import { HealthDocument, MedicalStudy, AdviceLog } from "../types";
 import { runGenAIWithFallback } from "./geminiService";
 
 const cleanBuffer = (data: string): string => {
