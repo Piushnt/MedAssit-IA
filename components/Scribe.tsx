@@ -13,7 +13,6 @@ const Scribe: React.FC = () => {
   const [copied, setCopied] = useState(false);
   const recognitionRef = useRef<any>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const recentPhrasesRef = useRef<string[]>([]);
 
   useEffect(() => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -24,30 +23,15 @@ const Scribe: React.FC = () => {
       recognitionRef.current.lang = 'fr-FR';
 
       recognitionRef.current.onresult = (event: any) => {
-        let currentTranscript = '';
-        const recent = recentPhrasesRef.current;
-
-        for (let i = event.resultIndex; i < event.results.length; i++) {
+        let finalTranscript = '';
+        for (let i = 0; i < event.results.length; i++) {
           if (event.results[i].isFinal) {
-            const phrase = event.results[i][0].transcript.trim();
-
-            // Check for potential repetition spam (same phrase > 3 times recently)
-            const repetitionCount = recent.filter(p => p === phrase).length;
-
-            if (repetitionCount < 3) {
-              currentTranscript += phrase + " ";
-
-              // Update recent phrases history (keep last 10)
-              recent.push(phrase);
-              if (recent.length > 10) recent.shift();
-            } else {
-              console.warn("Scribe: Repetition spam detected and filtered:", phrase);
-            }
+            finalTranscript += event.results[i][0].transcript;
           }
         }
 
-        if (currentTranscript) {
-          setTranscript(prev => prev + (prev ? " " : "") + currentTranscript.trim());
+        if (finalTranscript) {
+          setTranscript(finalTranscript.trim());
         }
       };
     }
@@ -197,8 +181,8 @@ const Scribe: React.FC = () => {
               <button
                 onClick={toggleRecording}
                 className={`w-full py-6 rounded-[2rem] font-black text-xl flex items-center justify-center gap-5 transition-all shadow-xl active:scale-95 ${isRecording
-                    ? 'bg-slate-900 dark:bg-slate-100 dark:text-slate-900 text-white'
-                    : 'bg-indigo-600 text-white shadow-indigo-600/20 hover:bg-indigo-700'
+                  ? 'bg-slate-900 dark:bg-slate-100 dark:text-slate-900 text-white'
+                  : 'bg-indigo-600 text-white shadow-indigo-600/20 hover:bg-indigo-700'
                   }`}
               >
                 {isRecording ? "Terminer la séance" : "Commencer l'écoute"}
@@ -282,8 +266,8 @@ const Scribe: React.FC = () => {
                 <button
                   onClick={copyToClipboard}
                   className={`flex items-center gap-2 px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-lg active:scale-95 ${copied
-                      ? 'bg-emerald-500 text-white'
-                      : 'bg-slate-900 dark:bg-white dark:text-slate-900 text-white hover:opacity-90'
+                    ? 'bg-emerald-500 text-white'
+                    : 'bg-slate-900 dark:bg-white dark:text-slate-900 text-white hover:opacity-90'
                     }`}
                 >
                   {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
