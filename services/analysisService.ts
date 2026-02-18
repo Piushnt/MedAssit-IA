@@ -88,3 +88,20 @@ export const analyserPieceJointe = async (doc: HealthDocument): Promise<string> 
 
   return runGenAIWithFallback(parts, systemInstruction, 0);
 };
+
+/**
+ * Analyse approfondie d'un rapport historique pour une revue clinique post-consultation.
+ */
+export const analyserRapportHistorique = async (log: AdviceLog): Promise<string> => {
+  const systemInstruction = "Expert Réviseur Clinique. Votre rôle est d'analyser une interaction passée entre un praticien et une IA pour identifier des points de vigilance, des suggestions de suivi ou des précisions médicales oubliées.";
+  const prompt = `Veuillez analyser le rapport de consultation suivant :
+  
+  DATE: ${new Date(log.timestamp).toLocaleString('fr-FR')}
+  REQUÊTE PRATICIEN: ${log.query}
+  RÉPONSE IA: ${log.response}
+  SOURCES UTILISÉES: ${log.sources.join(', ')}
+  
+  Objectif : Fournir une revue critique et constructive. Signalez tout point qui mériterait une attention particulière ou des examens complémentaires suggérés.`;
+
+  return runGenAIWithFallback([{ text: prompt }], systemInstruction, 0.2);
+};
