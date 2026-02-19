@@ -76,21 +76,6 @@ const Auth: React.FC<AuthProps> = ({ onComplete }) => {
         if (error) throw error;
 
         if (data.user) {
-          // Profile is created via SQL trigger or manual insert
-          // Let's do a manual insert for robustness in case trigger wasn't set up
-          const { error: profileError } = await supabase
-            .from('profiles')
-            .insert([{
-              id: data.user.id,
-              name: form.name,
-              email: form.email,
-              specialty: form.specialty,
-              license_number: form.license,
-              is_verified: true
-            }]);
-
-          if (profileError && profileError.code !== '23505') throw profileError; // Ignore if already exists (trigger)
-
           onComplete({
             id: data.user.id,
             name: form.name,
