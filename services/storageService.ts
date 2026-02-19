@@ -41,7 +41,7 @@ export const StorageService = {
   },
 
   setCurrentDoctorId: (id: string) => localStorage.setItem(KEYS.SESSION_ID, id),
-  
+
   getDoctor: (): Doctor | null => {
     try {
       const sessionId = localStorage.getItem(KEYS.SESSION_ID);
@@ -50,7 +50,7 @@ export const StorageService = {
       return doctors.find(d => d.id === sessionId) || null;
     } catch (e) { return null; }
   },
-  
+
   // Gestion des Patients (filtrés par Docteur)
   savePatients: (patients: Patient[]) => {
     const doctor = StorageService.getDoctor();
@@ -62,7 +62,7 @@ export const StorageService = {
     const otherPatients = allStoredPatients.filter(p => p.doctorId !== doctor.id);
     // On fusionne avec les patients mis à jour du docteur actuel
     const updatedAll = [...otherPatients, ...patients.map(p => ({ ...p, doctorId: doctor.id }))];
-    
+
     localStorage.setItem(KEYS.PATIENTS, JSON.stringify(updatedAll));
   },
 
@@ -95,11 +95,11 @@ export const StorageService = {
       return s ? JSON.parse(s) : [];
     } catch (e) { return []; }
   },
-  
+
   addPatient: (patient: Patient) => {
     const doctor = StorageService.getDoctor();
     if (!doctor) return;
-    
+
     const ps = StorageService.getPatients();
     const newPatient = { ...patient, doctorId: doctor.id };
     StorageService.savePatients([newPatient, ...ps]);
@@ -140,9 +140,11 @@ export const StorageService = {
     localStorage.setItem(KEYS.AUDIT_LOGS, JSON.stringify([newEntry, ...logs].slice(0, 100)));
   },
 
-  logout: () => {
+  logout: async () => {
     StorageService.logAudit('Déconnexion Praticien', 'low');
     localStorage.removeItem(KEYS.SESSION_ID);
+    const { supabase } = await import('../lib/supabase');
+    await supabase.auth.signOut();
   },
 
   clearAll: () => {

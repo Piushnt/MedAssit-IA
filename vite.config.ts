@@ -10,6 +10,7 @@ export default defineConfig(({ mode }) => {
       host: '0.0.0.0',
     },
     plugins: [react()],
+    envPrefix: ['VITE_', 'NEXT_PUBLIC_'],
     define: {
       // 'process.env': {} // Removed as we use import.meta.env
     },

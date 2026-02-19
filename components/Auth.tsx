@@ -1,8 +1,8 @@
 
 import React, { useState } from 'react';
-import { Stethoscope, ShieldCheck, ArrowRight, Loader2, Activity, Lock, Mail, User, Fingerprint } from 'lucide-react';
+import { Stethoscope, ShieldCheck, Loader2, Activity, Lock, Mail, User, Fingerprint } from 'lucide-react';
 import { Doctor } from '../types';
-import { StorageService } from '../services/storageService';
+import { supabase } from '../lib/supabase';
 
 interface AuthProps {
   onComplete: (doctor: Doctor) => void;
@@ -11,55 +11,102 @@ interface AuthProps {
 const Auth: React.FC<AuthProps> = ({ onComplete }) => {
   const [isLogin, setIsLogin] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [form, setForm] = useState({ 
-    name: '', 
-    email: '', 
-    password: '', 
-    specialty: 'Médecine Générale', 
-    license: '' 
+  const [form, setForm] = useState({
+    name: '',
+    email: '',
+    password: '',
+    specialty: 'Médecine Générale',
+    license: ''
   });
 
   const specialties = [
-    "Médecine Générale", 
-    "Cardiologie", 
-    "Endocrinologie", 
-    "Neurologie", 
-    "Pédiatrie", 
+    "Médecine Générale",
+    "Cardiologie",
+    "Endocrinologie",
+    "Neurologie",
+    "Pédiatrie",
     "Radiologie"
   ];
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsProcessing(true);
 
-    setTimeout(() => {
-      try {
-        if (isLogin) {
-          const doctor = StorageService.login(form.name, form.password);
-          if (doctor) {
-            onComplete(doctor);
-          } else {
-            alert("Identifiants incorrects.");
-          }
-        } else {
-          const newDoctor: Doctor = {
-            id: (crypto as any).randomUUID(),
-            name: form.name.trim(),
-            email: form.email.trim(),
-            password: form.password,
-            specialty: form.specialty,
-            licenseNumber: form.license.trim(),
-            isVerified: true
-          };
-          StorageService.signup(newDoctor);
-          onComplete(newDoctor);
+    try {
+      if (isLogin) {
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: form.email || (form.name.includes('@') ? form.name : ''), // Support email as name for login
+          password: form.password,
+        });
+
+        if (error) throw error;
+
+        if (data.user) {
+          const { data: profile, error: profileError } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', data.user.id)
+            .single();
+
+          if (profileError) throw profileError;
+
+          onComplete({
+            id: profile.id,
+            name: profile.name,
+            email: profile.email,
+            password: '', // Password is not stored or needed client-side anymore
+            specialty: profile.specialty,
+            licenseNumber: profile.license_number,
+            isVerified: profile.is_verified
+          });
         }
-      } catch (err: any) {
-        alert(err.message);
-      } finally {
-        setIsProcessing(false);
+      } else {
+        const { data, error } = await supabase.auth.signUp({
+          email: form.email,
+          password: form.password,
+          options: {
+            data: {
+              name: form.name,
+              specialty: form.specialty,
+              license_number: form.license
+            }
+          }
+        });
+
+        if (error) throw error;
+
+        if (data.user) {
+          // Profile is created via SQL trigger or manual insert
+          // Let's do a manual insert for robustness in case trigger wasn't set up
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .insert([{
+              id: data.user.id,
+              name: form.name,
+              email: form.email,
+              specialty: form.specialty,
+              license_number: form.license,
+              is_verified: true
+            }]);
+
+          if (profileError && profileError.code !== '23505') throw profileError; // Ignore if already exists (trigger)
+
+          onComplete({
+            id: data.user.id,
+            name: form.name,
+            email: form.email,
+            password: '',
+            specialty: form.specialty,
+            licenseNumber: form.license,
+            isVerified: true
+          });
+        }
       }
-    }, 1200);
+    } catch (err: any) {
+      alert(err.message || "Une erreur est survenue lors de l'authentification.");
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   return (
@@ -74,7 +121,7 @@ const Auth: React.FC<AuthProps> = ({ onComplete }) => {
           <div className="absolute top-0 right-0 p-10 opacity-5">
             <Stethoscope className="w-48 h-48 rotate-12" />
           </div>
-          
+
           <div className="flex items-center gap-4 mb-10">
             <div className="bg-indigo-500 p-3.5 rounded-[1.25rem] shadow-2xl shadow-indigo-500/40">
               <Activity className="w-7 h-7 text-white" />
@@ -95,15 +142,15 @@ const Auth: React.FC<AuthProps> = ({ onComplete }) => {
           <div className="space-y-4">
             <div className="space-y-2">
               <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-2 flex items-center gap-2">
-                <User className="w-3 h-3" /> Nom Complet
+                <Mail className="w-3 h-3" /> {isLogin ? 'Email' : 'Nom Complet'}
               </label>
-              <input 
-                type="text" 
+              <input
+                type={isLogin ? 'email' : 'text'}
                 required
-                placeholder="Dr. Sarah Martin" 
+                placeholder={isLogin ? 'votre@email.fr' : 'Dr. Sarah Martin'}
                 className="w-full px-7 py-4 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-white/5 rounded-2xl outline-none focus:ring-4 focus:ring-indigo-500/10 font-bold text-slate-800 dark:text-white"
-                value={form.name} 
-                onChange={e => setForm({...form, name: e.target.value})}
+                value={isLogin ? form.email : form.name}
+                onChange={e => setForm(isLogin ? { ...form, email: e.target.value } : { ...form, name: e.target.value })}
               />
             </div>
 
@@ -113,35 +160,35 @@ const Auth: React.FC<AuthProps> = ({ onComplete }) => {
                   <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-2 flex items-center gap-2">
                     <Mail className="w-3 h-3" /> Email Professionnel
                   </label>
-                  <input 
-                    type="email" 
+                  <input
+                    type="email"
                     required
-                    placeholder="sarah.martin@sante.fr" 
+                    placeholder="sarah.martin@sante.fr"
                     className="w-full px-7 py-4 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-white/5 rounded-2xl outline-none focus:ring-4 focus:ring-indigo-500/10 font-bold text-slate-800 dark:text-white"
-                    value={form.email} 
-                    onChange={e => setForm({...form, email: e.target.value})}
+                    value={form.email}
+                    onChange={e => setForm({ ...form, email: e.target.value })}
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-2">Spécialité</label>
-                    <select 
+                    <select
                       className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-white/5 rounded-2xl font-bold text-slate-800 dark:text-white outline-none"
-                      value={form.specialty} 
-                      onChange={e => setForm({...form, specialty: e.target.value})}
+                      value={form.specialty}
+                      onChange={e => setForm({ ...form, specialty: e.target.value })}
                     >
                       {specialties.map(s => <option key={s} value={s}>{s}</option>)}
                     </select>
                   </div>
                   <div className="space-y-2">
                     <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-2">N° RPPS</label>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       required
-                      placeholder="1010XXXXXXXX" 
+                      placeholder="1010XXXXXXXX"
                       className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-white/5 rounded-2xl font-bold text-slate-800 dark:text-white outline-none"
-                      value={form.license} 
-                      onChange={e => setForm({...form, license: e.target.value.replace(/\D/g, '')})}
+                      value={form.license}
+                      onChange={e => setForm({ ...form, license: e.target.value.replace(/\D/g, '') })}
                     />
                   </div>
                 </div>
@@ -152,18 +199,18 @@ const Auth: React.FC<AuthProps> = ({ onComplete }) => {
               <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-2 flex items-center gap-2">
                 <Lock className="w-3 h-3" /> Mot de passe
               </label>
-              <input 
-                type="password" 
+              <input
+                type="password"
                 required
-                placeholder="••••••••" 
+                placeholder="••••••••"
                 className="w-full px-7 py-4 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-white/5 rounded-2xl outline-none focus:ring-4 focus:ring-indigo-500/10 font-bold text-slate-800 dark:text-white"
-                value={form.password} 
-                onChange={e => setForm({...form, password: e.target.value})}
+                value={form.password}
+                onChange={e => setForm({ ...form, password: e.target.value })}
               />
             </div>
           </div>
 
-          <button 
+          <button
             type="submit"
             disabled={isProcessing}
             className="w-full py-5 bg-indigo-600 text-white rounded-2xl font-black text-lg flex items-center justify-center gap-4 hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-500/20 active:scale-95 disabled:opacity-50"
@@ -173,7 +220,7 @@ const Auth: React.FC<AuthProps> = ({ onComplete }) => {
           </button>
 
           <div className="text-center pt-4">
-            <button 
+            <button
               type="button"
               onClick={() => setIsLogin(!isLogin)}
               className="text-xs font-black text-slate-400 uppercase tracking-widest hover:text-indigo-600 transition-colors"

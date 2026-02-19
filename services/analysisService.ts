@@ -1,6 +1,8 @@
 
 import { HealthDocument, MedicalStudy, AdviceLog } from "../types";
 import { runGenAIWithFallback } from "./geminiService";
+import { DatabaseService } from "./databaseService";
+import { supabase } from "../lib/supabase";
 
 const cleanBuffer = (data: string): string => {
   return data.replace(/^data:.*?;base64,/, "");
@@ -46,7 +48,21 @@ export const traiterRequeteClinique = async (
 
   payload.push({ text: `REQUÊTE PRATICIEN :\n${query}` });
 
-  return runGenAIWithFallback(payload, systemInstruction, 0.1);
+  const result = await runGenAIWithFallback(payload, systemInstruction, 0.1);
+
+  // Auto-save if authenticated
+  const { data: { user } } = await supabase.auth.getUser();
+  if (user) {
+    DatabaseService.saveMedicalRecord({
+      doctor_id: user.id,
+      type: isSummary ? 'SUMMARY' : 'ANALYSIS',
+      query: query,
+      response: result,
+      sources: sources
+    }).catch(err => console.error("Auto-save failed:", err));
+  }
+
+  return result;
 };
 
 /**
@@ -56,7 +72,20 @@ export const genererNoteCliniqueSOAP = async (transcript: string): Promise<strin
   const systemInstruction = "Expert Scribe Médical. Utiliser une terminologie clinique standardisée et professionnelle.";
   const prompt = `Structurer la transcription suivante en note SOAP officielle (Subjectif, Objectif, Analyse, Plan) :\n${transcript}`;
 
-  return runGenAIWithFallback([{ text: prompt }], systemInstruction, 0.2);
+  const result = await runGenAIWithFallback([{ text: prompt }], systemInstruction, 0.2);
+
+  // Auto-save if authenticated
+  const { data: { user } } = await supabase.auth.getUser();
+  if (user) {
+    DatabaseService.saveMedicalRecord({
+      doctor_id: user.id,
+      type: 'SOAP',
+      query: 'Transcription SOAP',
+      response: result
+    }).catch(err => console.error("Auto-save failed:", err));
+  }
+
+  return result;
 };
 
 /**
@@ -86,7 +115,20 @@ export const analyserPieceJointe = async (doc: HealthDocument): Promise<string> 
 
   const systemInstruction = "Analyser le document clinique. Extraire les points critiques et signaler toute anomalie biologique majeure.";
 
-  return runGenAIWithFallback(parts, systemInstruction, 0);
+  const result = await runGenAIWithFallback(parts, systemInstruction, 0);
+
+  // Auto-save if authenticated
+  const { data: { user } } = await supabase.auth.getUser();
+  if (user) {
+    DatabaseService.saveMedicalRecord({
+      doctor_id: user.id,
+      type: 'ANALYSIS',
+      query: `Analyse document: ${doc.name}`,
+      response: result
+    }).catch(err => console.error("Auto-save failed:", err));
+  }
+
+  return result;
 };
 
 /**

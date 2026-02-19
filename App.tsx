@@ -11,6 +11,8 @@ import Scribe from './components/Scribe.tsx';
 import SecurityAudit from './components/SecurityAudit.tsx';
 import { StorageService } from './services/storageService.ts';
 import { Doctor, Patient, HealthDocument, AdviceLog } from './types.ts';
+import { supabase } from './lib/supabase';
+import { DatabaseService } from './services/databaseService';
 
 const App: React.FC = () => {
   const [doctor, setDoctor] = useState<Doctor | null>(null);
@@ -18,26 +20,67 @@ const App: React.FC = () => {
   const [globalDocs, setGlobalDocs] = useState<HealthDocument[]>([]);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isInitializing, setIsInitializing] = useState(true);
-  
+
   // State pour la sauvegarde automatique
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'error'>('saved');
   const [lastSaved, setLastSaved] = useState<number>(Date.now());
 
   useEffect(() => {
-    const savedDoc = StorageService.getDoctor();
+    // Initial data from Supabase Auth
+    const checkUser = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        const profile = await DatabaseService.getProfile(session.user.id);
+        if (profile) {
+          setDoctor({
+            id: profile.id,
+            name: profile.name,
+            email: profile.email,
+            password: '',
+            specialty: profile.specialty,
+            licenseNumber: profile.license_number,
+            isVerified: profile.is_verified
+          });
+        }
+      }
+      setIsInitializing(false);
+    };
+
+    checkUser();
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (session?.user) {
+        const profile = await DatabaseService.getProfile(session.user.id);
+        if (profile) {
+          setDoctor({
+            id: profile.id,
+            name: profile.name,
+            email: profile.email,
+            password: '',
+            specialty: profile.specialty,
+            licenseNumber: profile.license_number,
+            isVerified: profile.is_verified
+          });
+        }
+      } else {
+        setDoctor(null);
+      }
+    });
+
+    // Local data fallback
     const savedPatients = StorageService.getPatients();
     const savedGlobalDocs = StorageService.getGlobalDocs();
-    
-    setDoctor(savedDoc);
     setPatients(savedPatients);
     setGlobalDocs(savedGlobalDocs);
-    setIsInitializing(false);
+
+    return () => subscription.unsubscribe();
   }, []);
 
   // Heartbeat de sauvegarde toutes les 5 minutes
   useEffect(() => {
     if (!doctor) return;
-    
+
     const pulse = setInterval(() => {
       handleForceSave();
     }, 5 * 60 * 1000); // 5 minutes
@@ -78,15 +121,14 @@ const App: React.FC = () => {
 
   if (!doctor) {
     return <Auth onComplete={(doc) => {
-      StorageService.setCurrentDoctorId(doc.id);
       setDoctor(doc);
     }} />;
   }
 
   return (
-    <Layout 
-      activeTab={activeTab} 
-      setActiveTab={setActiveTab} 
+    <Layout
+      activeTab={activeTab}
+      setActiveTab={setActiveTab}
       doctorName={doctor.name}
       specialty={doctor.specialty}
       saveStatus={saveStatus}
@@ -95,8 +137,8 @@ const App: React.FC = () => {
       {activeTab === 'dashboard' && <Dashboard doctor={doctor} patients={patients} addLog={handleAddLog} />}
       {activeTab === 'scribe' && <Scribe />}
       {activeTab === 'patients' && (
-        <PatientManager 
-          patients={patients} 
+        <PatientManager
+          patients={patients}
           setPatients={(pOrFn) => {
             setPatients(prev => {
               const next = typeof pOrFn === 'function' ? pOrFn(prev) : pOrFn;
@@ -104,25 +146,25 @@ const App: React.FC = () => {
               setLastSaved(Date.now());
               return next;
             });
-          }} 
+          }}
           doctor={doctor}
         />
       )}
       {activeTab === 'database' && <DatabaseViewer specialty={doctor.specialty} />}
       {activeTab === 'audit' && <SecurityAudit />}
       {activeTab === 'logs' && <LogViewer logs={allLogs} />}
-      
+
       {activeTab === 'documents' && (
         <div className="space-y-10 animate-in fade-in duration-700">
           <div className="max-w-5xl auto">
             <div className="bg-white dark:bg-slate-900 p-12 rounded-[3.5rem] border border-slate-100 dark:border-white/5 shadow-sm relative overflow-hidden">
-               <div className="relative z-10">
+              <div className="relative z-10">
                 <h3 className="text-2xl font-black text-slate-800 dark:text-white mb-3 tracking-tight">Mes Protocoles & Ressources</h3>
                 <p className="text-slate-400 font-medium mb-12 max-w-xl leading-relaxed">
                   Bibliothèque transversale utilisée comme contexte additionnel par le moteur expert.
                 </p>
                 <DocumentManager documents={globalDocs} setDocuments={saveGlobalDocs} />
-               </div>
+              </div>
             </div>
           </div>
         </div>
