@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ShieldCheck, Activity, LogOut, LayoutDashboard, Users, FileText, History, Database, Sun, Moon, Mic, Lock, RefreshCcw, CheckCircle, AlertCircle, Menu, X } from 'lucide-react';
+import { ShieldCheck, Activity, LogOut, LayoutDashboard, Users, FileText, History, Database, Sun, Moon, Mic, Lock, RefreshCcw, CheckCircle, AlertCircle, Menu, X, Pill } from 'lucide-react';
 import { StorageService } from '../services/storageService';
 
 interface LayoutProps {
@@ -29,6 +29,8 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, doct
   const navItems = [
     { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard' },
     { id: 'scribe', icon: Mic, label: 'Scribe Ambiant' },
+    { id: 'prescription', icon: Pill, label: 'Ordonnances' },
+    { id: 'patient-report', icon: FileText, label: 'Rapports Cliniques' },
     { id: 'patients', icon: Users, label: 'Patients' },
     { id: 'logs', icon: History, label: 'Historique' },
     { id: 'database', icon: Database, label: 'Base Scientifique' },
@@ -98,8 +100,8 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, doct
               key={item.id}
               onClick={() => handleNavClick(item.id)}
               className={`w-full flex items-center gap-4 px-5 py-3.5 rounded-2xl transition-all duration-300 group ${activeTab === item.id
-                  ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20 scale-[1.02]'
-                  : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20 scale-[1.02]'
+                : 'text-slate-400 hover:bg-slate-800 hover:text-white'
                 }`}
             >
               <item.icon className={`w-5 h-5 transition-transform ${activeTab === item.id ? 'scale-110' : 'group-hover:scale-110'}`} />

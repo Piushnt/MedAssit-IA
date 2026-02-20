@@ -9,6 +9,8 @@ import DocumentManager from './components/DocumentManager.tsx';
 import LogViewer from './components/LogViewer.tsx';
 import Scribe from './components/Scribe.tsx';
 import SecurityAudit from './components/SecurityAudit.tsx';
+import PrescriptionModule from './components/PrescriptionModule.tsx';
+import PatientReportModule from './components/PatientReportModule.tsx';
 import { StorageService } from './services/storageService.ts';
 import { Doctor, Patient, HealthDocument, AdviceLog } from './types.ts';
 import { supabase } from './lib/supabase';
@@ -136,6 +138,8 @@ const App: React.FC = () => {
     >
       {activeTab === 'dashboard' && <Dashboard doctor={doctor} patients={patients} addLog={handleAddLog} />}
       {activeTab === 'scribe' && <Scribe />}
+      {activeTab === 'prescription' && <PrescriptionModule doctor={doctor} patients={patients} />}
+      {activeTab === 'patient-report' && <PatientReportModule doctor={doctor} patients={patients} />}
       {activeTab === 'patients' && (
         <PatientManager
           patients={patients}

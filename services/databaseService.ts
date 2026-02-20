@@ -46,5 +46,42 @@ export const DatabaseService = {
             return null;
         }
         return data;
+    },
+
+    /**
+     * Saves a new prescription.
+     */
+    async savePrescription(data: {
+        doctor_id: string;
+        patient_id: string;
+        patient_name: string;
+        medications: any[];
+        special_instructions?: string;
+    }) {
+        const { error } = await supabase
+            .from('prescriptions')
+            .insert([data]);
+
+        if (error) {
+            console.error('Error saving prescription:', error);
+            throw error;
+        }
+    },
+
+    /**
+     * Fetches prescriptions for the current doctor.
+     */
+    async getPrescriptions(doctorId: string) {
+        const { data, error } = await supabase
+            .from('prescriptions')
+            .select('*')
+            .eq('doctor_id', doctorId)
+            .order('created_at', { ascending: false });
+
+        if (error) {
+            console.error('Error fetching prescriptions:', error);
+            return [];
+        }
+        return data;
     }
 };
