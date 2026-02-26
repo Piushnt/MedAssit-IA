@@ -30,22 +30,39 @@ const App: React.FC = () => {
   useEffect(() => {
     // Initial data from Supabase Auth
     const checkUser = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        const profile = await DatabaseService.getProfile(session.user.id);
-        if (profile) {
-          setDoctor({
-            id: profile.id,
-            name: profile.name,
-            email: profile.email,
-            password: '',
-            specialty: profile.specialty,
-            licenseNumber: profile.license_number,
-            isVerified: profile.is_verified
-          });
+      try {
+        console.log('[Auth-Debug] Checking session...');
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error('[Auth-Debug] Session error:', error);
+          throw error;
         }
+
+        if (session?.user) {
+          console.log('[Auth-Debug] User found:', session.user.id);
+          const profile = await DatabaseService.getProfile(session.user.id);
+          if (profile) {
+            setDoctor({
+              id: profile.id,
+              name: profile.name,
+              email: profile.email,
+              password: '',
+              specialty: profile.specialty,
+              licenseNumber: profile.license_number,
+              isVerified: profile.is_verified
+            });
+          } else {
+            console.warn('[Auth-Debug] Profile not found for user.');
+          }
+        } else {
+          console.log('[Auth-Debug] No active session.');
+        }
+      } catch (err) {
+        console.error('[Auth-Debug] Initialization failed:', err);
+      } finally {
+        setIsInitializing(false);
       }
-      setIsInitializing(false);
     };
 
     checkUser();
