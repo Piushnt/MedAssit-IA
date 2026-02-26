@@ -33,15 +33,17 @@ const App: React.FC = () => {
       try {
         console.log('[Auth-Debug] Checking session...');
         const { data: { session }, error } = await supabase.auth.getSession();
-        
+        console.log('[Auth-Debug] getSession returned. Session:', !!session, 'Error:', error);
+
         if (error) {
           console.error('[Auth-Debug] Session error:', error);
           throw error;
         }
 
         if (session?.user) {
-          console.log('[Auth-Debug] User found:', session.user.id);
+          console.log('[Auth-Debug] User found in session:', session.user.id);
           const profile = await DatabaseService.getProfile(session.user.id);
+          console.log('[Auth-Debug] Profile fetch completed:', !!profile);
           if (profile) {
             setDoctor({
               id: profile.id,
@@ -56,11 +58,12 @@ const App: React.FC = () => {
             console.warn('[Auth-Debug] Profile not found for user.');
           }
         } else {
-          console.log('[Auth-Debug] No active session.');
+          console.log('[Auth-Debug] No active session found.');
         }
       } catch (err) {
-        console.error('[Auth-Debug] Initialization failed:', err);
+        console.error('[Auth-Debug] Initialization failed catastrophically:', err);
       } finally {
+        console.log('[Auth-Debug] Setting isInitializing to false.');
         setIsInitializing(false);
       }
     };
